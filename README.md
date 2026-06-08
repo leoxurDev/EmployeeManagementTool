@@ -84,9 +84,9 @@ An integrated, ServiceNow-themed IT service portal is available for staff:
 
 ---
 
-## ⚙️ Running Seeding and Tests
+## ⚙️ Running Seeding and Tests (Local/Virtualenv)
 
-To seed the database with configurations and mock data (creating default employees with roster schedules and logged hours), run:
+To seed the database with configurations and mock data locally, run:
 
 1. **Seed default configurations (departments, avatar emojis, colors):**
    ```bash
@@ -100,3 +100,156 @@ To seed the database with configurations and mock data (creating default employe
    ```bash
    venv/bin/python manage.py test
    ```
+
+---
+
+## 🐳 Running in Docker
+
+You can containerize, build, and run the application using **Docker** or **Docker Compose**.
+
+### Method 1: Using Docker Compose (Recommended)
+This runs the application using the configuration in `docker-compose.yml`, mapping port `80` on the host to port `8000` in the container and mounting the SQLite database.
+
+1. **Start the services and build the image:**
+   ```bash
+   docker-compose up --build -d
+   ```
+2. **Run migrations and seed configuration data inside the running web container:**
+   ```bash
+   docker-compose exec web python manage.py migrate
+   docker-compose exec web python manage.py seed_configurations
+   docker-compose exec web python seed_data.py
+   ```
+3. **Access the application:**
+   Open `http://localhost/` in your browser.
+
+---
+
+### Method 2: Using Raw Docker Commands
+If you prefer not to use Docker Compose, you can build and run the container directly.
+
+1. **Build the Docker image:**
+   ```bash
+   docker build -t employee-attendance-app .
+   ```
+2. **Run the container (exposing port 8000 to port 8000 on host):**
+   ```bash
+   docker run -d -p 8000:8000 --name employee-attendance-container employee-attendance-app
+   ```
+3. **Run database migrations and seed default records:**
+   ```bash
+   docker exec -it employee-attendance-container python manage.py migrate
+   docker exec -it employee-attendance-container python manage.py seed_configurations
+   docker exec -it employee-attendance-container python seed_data.py
+   ```
+4. **Access the application:**
+   Open `http://localhost:8000/` in your browser.
+
+---
+
+## ☁️ Cloud Deployment Guide (EC2, Azure, GCP)
+
+The most standard and automated way to run this application in a cloud environment is using **Docker** and **Docker Compose**. Here are the deployment steps for major cloud providers:
+
+### 1. AWS EC2 Deployment
+1. **Launch an EC2 Instance**:
+   - Go to the AWS Console -> EC2 -> Launch Instance.
+   - Choose **Ubuntu 22.04 LTS** as the Amazon Machine Image (AMI).
+   - Select an instance type (e.g., `t2.micro` or `t3.micro`).
+   - Create or select an SSH key pair (`.pem`).
+   - Under **Security Groups**, configure inbound rules to allow:
+     - **SSH (Port 22)** from your IP.
+     - **HTTP (Port 80)** from anywhere (`0.0.0.0/0`).
+2. **Connect via SSH**:
+   ```bash
+   ssh -i "your-key.pem" ubuntu@your-ec2-public-ip
+   ```
+3. **Install Docker & Docker Compose**:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y docker.io docker-compose
+   sudo systemctl start docker
+   sudo usermod -aG docker ubuntu
+   # Log out and log back in to apply group changes
+   exit
+   ssh -i "your-key.pem" ubuntu@your-ec2-public-ip
+   ```
+4. **Deploy and Seed**:
+   ```bash
+   git clone https://github.com/leoxurDev/EmployeeManagementTool.git
+   cd EmployeeManagementTool
+   docker-compose up --build -d
+   docker-compose exec web python manage.py migrate
+   docker-compose exec web python manage.py seed_configurations
+   docker-compose exec web python seed_data.py
+   ```
+5. **Access the Portal**:
+   - Navigate to the Public IP or DNS of your EC2 instance (`http://your-ec2-ip/`).
+
+---
+
+### 2. Azure Virtual Machine Deployment
+1. **Create an Azure VM**:
+   - Go to the Azure Portal -> Virtual Machines -> Create.
+   - Choose **Ubuntu Server 22.04 LTS** as the Image.
+   - Set the size (e.g., `Standard_B1s`).
+   - Configure SSH public key authorization.
+   - In **Inbound port rules**, allow **SSH (22)** and **HTTP (80)**.
+2. **Connect via SSH**:
+   ```bash
+   ssh azureuser@your-azure-vm-ip
+   ```
+3. **Install Docker & Docker Compose**:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y docker.io docker-compose
+   sudo usermod -aG docker azureuser
+   exit
+   ssh azureuser@your-azure-vm-ip
+   ```
+4. **Deploy and Seed**:
+   ```bash
+   git clone https://github.com/leoxurDev/EmployeeManagementTool.git
+   cd EmployeeManagementTool
+   docker-compose up --build -d
+   docker-compose exec web python manage.py migrate
+   docker-compose exec web python manage.py seed_configurations
+   docker-compose exec web python seed_data.py
+   ```
+5. **Access the Portal**:
+   - Navigate to the Public IP of your Azure Virtual Machine (`http://your-azure-vm-ip/`).
+
+---
+
+### 3. GCP Compute Engine Deployment
+1. **Create a VM Instance**:
+   - Go to GCP Console -> Compute Engine -> VM Instances -> Create Instance.
+   - Choose a machine type (e.g., `e2-micro`).
+   - In **Boot Disk**, select **Ubuntu 22.04 LTS**.
+   - Under **Firewall**, check **Allow HTTP traffic**.
+2. **Connect via SSH**:
+   - Click the **SSH** button next to your instance in the GCP console list, or run:
+     ```bash
+     gcloud compute ssh your-instance-name --zone=your-instance-zone
+     ```
+3. **Install Docker & Docker Compose**:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y docker.io docker-compose
+   sudo usermod -aG docker $USER
+   exit
+   # Re-connect via SSH to apply groups
+   ```
+4. **Deploy and Seed**:
+   ```bash
+   git clone https://github.com/leoxurDev/EmployeeManagementTool.git
+   cd EmployeeManagementTool
+   docker-compose up --build -d
+   docker-compose exec web python manage.py migrate
+   docker-compose exec web python manage.py seed_configurations
+   docker-compose exec web python seed_data.py
+   ```
+5. **Access the Portal**:
+   - Navigate to the External IP of your Compute Engine Instance (`http://your-gcp-vm-ip/`).
+
+
