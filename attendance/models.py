@@ -5,7 +5,7 @@ from django.core.validators import RegexValidator
 from django.contrib.auth.models import User
 
 
-class ClassroomOption(models.Model):
+class DepartmentOption(models.Model):
     emoji = models.CharField(max_length=5, unique=True)
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=100, blank=True)
@@ -15,7 +15,7 @@ class ClassroomOption(models.Model):
 
     class Meta:
         ordering = ['order', 'name']
-        verbose_name_plural = 'Classroom Options'
+        verbose_name_plural = 'Department Options'
 
     def __str__(self):
         return f"{self.emoji} {self.name}"
@@ -60,10 +60,10 @@ class AvatarColor(models.Model):
         return self.hex_code
 
 
-class Student(models.Model):
+class Employee(models.Model):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    classroom = models.CharField(max_length=50)
+    department = models.CharField(max_length=50)
     avatar_emoji = models.CharField(max_length=5)
     avatar_color = models.CharField(max_length=7)
     is_active = models.BooleanField(default=True)
@@ -75,7 +75,7 @@ class Student(models.Model):
     )
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.classroom})"
+        return f"{self.first_name} {self.last_name} ({self.department})"
 
     @property
     def full_name(self):
@@ -85,64 +85,81 @@ class Student(models.Model):
         today = timezone.localdate()
         return self.attendance_set.filter(date=today).first()
 
+    def today_roster(self):
+        today = timezone.localdate()
+        return self.roster_set.filter(date=today).first()
+
+
+class Roster(models.Model):
+    SHIFT_CHOICES = [
+        ('morning', 'Morning Shift (06:00 - 14:00)'),
+        ('afternoon', 'Afternoon Shift (14:00 - 22:00)'),
+        ('night', 'Night Shift (22:00 - 06:00)'),
+    ]
+
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    date = models.DateField(default=timezone.localdate)
+    shift = models.CharField(max_length=20, choices=SHIFT_CHOICES, default='morning')
+
+    class Meta:
+        unique_together = ('employee', 'date')
+        ordering = ['date', 'employee__first_name']
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.date} ({self.get_shift_display()})"
+
 
 class Attendance(models.Model):
-    TIME_PERIOD_CHOICES = [
-        ('morning', 'Morning (5 AM - 12 PM)'),
-        ('afternoon', 'Afternoon (12 PM - 5 PM)'),
-        ('evening', 'Evening (5 PM - 11:59 PM)'),
+    SHIFT_CHOICES = [
+        ('morning', 'Morning Shift'),
+        ('afternoon', 'Afternoon Shift'),
+        ('night', 'Night Shift'),
     ]
 
     STATUS_CHOICES = [
-        ('present', 'Present ☀️'),
-        ('absent', 'Absent 🌙'),
+        ('present', 'Present ✅'),
+        ('absent', 'Absent ❌'),
         ('late', 'Late ⏰'),
     ]
 
-    MOOD_CHOICES = [
-        ('happy', 'Happy 😊'),
-        ('excited', 'Excited 🤩'),
-        ('sleepy', 'Sleepy 🥱'),
-        ('silly', 'Silly 🤪'),
-        ('sad', 'Sad 😢'),
+    WORK_MODE_CHOICES = [
+        ('office', 'Office 🏢'),
+        ('remote', 'Remote 🏠'),
+        ('field', 'Field 🚗'),
     ]
 
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     date = models.DateField(default=timezone.localdate)
+    shift = models.CharField(max_length=20, choices=SHIFT_CHOICES, blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='present')
-    mood = models.CharField(max_length=10, choices=MOOD_CHOICES, blank=True, null=True)
-    time_period = models.CharField(max_length=10, choices=TIME_PERIOD_CHOICES, blank=True, null=True)
+    work_mode = models.CharField(max_length=15, choices=WORK_MODE_CHOICES, default='office')
     checked_in_at = models.DateTimeField(auto_now_add=True)
-    checked_in_by = models.CharField(max_length=15, default='child')
+    checked_out_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ('student', 'date')
-        ordering = ['-date', 'student__first_name']
+        unique_together = ('employee', 'date')
+        ordering = ['-date', 'employee__first_name']
 
     def __str__(self):
-        return f"{self.student.full_name} - {self.date} ({self.status})"
+        return f"{self.employee.full_name} - {self.date} ({self.status})"
+
+    @property
+    def hours_worked(self):
+        if self.checked_in_at and self.checked_out_at:
+            duration = self.checked_out_at - self.checked_in_at
+            return round(duration.total_seconds() / 3600.0, 2)
+        return 0.0
 
     @staticmethod
-    def get_current_time_period():
-        """Determine the current time period based on system time."""
+    def get_current_shift_by_time():
+        """Determine shift based on current hour."""
         hour = timezone.localtime().hour
-        if 5 <= hour < 12:
+        if 6 <= hour < 14:
             return 'morning'
-        elif 12 <= hour < 17:
+        elif 14 <= hour < 22:
             return 'afternoon'
         else:
-            return 'evening'
-
-    def save(self, *args, **kwargs):
-        """Auto-set time_period if not already set."""
-        if not self.time_period:
-            self.time_period = self.get_current_time_period()
-        super().save(*args, **kwargs)
-
-    @classmethod
-    def get_moods_for_time_period(cls, time_period):
-        """Get mood choices appropriate for a specific time period."""
-        return [mood for mood in cls.MOOD_CHOICES]
+            return 'night'
 
 
 class AppLayoutBlock(models.Model):
@@ -317,11 +334,9 @@ class TicketActivity(models.Model):
         return f"{self.get_activity_type_display()} by {self.author} at {self.created_at}"
 
 
-class TeacherSupportPermission(models.Model):
+class EmployeeSupportPermission(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='support_permission')
     can_raise_tickets = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username} - Can raise support: {self.can_raise_tickets}"
-
-

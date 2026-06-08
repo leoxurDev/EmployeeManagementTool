@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404, get_list_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 import csv
@@ -10,81 +10,68 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.views.decorators.csrf import ensure_csrf_cookie
-from .models import Student, Attendance, ClassroomOption, AppLayoutBlock, AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, TeacherSupportPermission
-from .forms import StudentForm
+from .models import (
+    Employee, Roster, Attendance, DepartmentOption, AppLayoutBlock,
+    AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission
+)
+from .forms import EmployeeForm
+
 
 def get_or_seed_layout_blocks():
     blocks = AppLayoutBlock.objects.all().order_by('order')
     if not blocks.exists():
         default_blocks = [
             ('header', 'Branding Header', 1),
-            ('classroom_tabs', 'Classroom Selection Tabs', 2),
+            ('classroom_tabs', 'Department Selection Tabs', 2),
             ('stats_banner', 'Roster Stats Banner', 3),
-            ('student_grid', 'Student Roster Grid', 4)
+            ('student_grid', 'Employee Roster Grid', 4)
         ]
         for bid, name, o in default_blocks:
             AppLayoutBlock.objects.create(block_id=bid, title=name, order=o, is_visible=True)
         blocks = AppLayoutBlock.objects.all().order_by('order')
     return blocks
 
-def get_school_schedule_status():
+
+def get_shift_schedule_status():
     import datetime
     local_now = timezone.localtime()
     current_time = local_now.time()
     
     # Parse times
-    start_time = datetime.time(9, 30)
-    recess1_start = datetime.time(11, 0)
-    recess1_end = datetime.time(11, 15)
-    lunch_start = datetime.time(12, 0)
-    lunch_end = datetime.time(13, 0)
-    recess2_start = datetime.time(14, 0)
-    recess2_end = datetime.time(14, 15)
-    end_time = datetime.time(15, 30)
+    morning_start = datetime.time(6, 0)
+    afternoon_start = datetime.time(14, 0)
+    night_start = datetime.time(22, 0)
     
-    if current_time < start_time:
-        status = "Before School 🌅"
-        message = "Check-in active. School starts at 9:30 AM."
-        badge = "active"
-    elif recess1_start <= current_time < recess1_end:
-        status = "Morning Recess 🧸"
-        message = "Morning playtime interval in progress."
-        badge = "recess"
-    elif lunch_start <= current_time < lunch_end:
-        status = "Lunch Hour 🍔"
-        message = "Lunch break (12:00 PM - 1:00 PM)."
-        badge = "lunch"
-    elif recess2_start <= current_time < recess2_end:
-        status = "Afternoon Recess 🧃"
-        message = "Afternoon play interval in progress."
-        badge = "recess"
-    elif start_time <= current_time < end_time:
-        status = "Class Time 📚"
-        message = "Learning and activities in progress."
-        badge = "class"
+    # Check current active shift
+    if morning_start <= current_time < afternoon_start:
+        status = "Morning Shift 🌅"
+        message = "Active Shift: 06:00 AM - 02:00 PM. Check-in active."
+        badge = "morning"
+    elif afternoon_start <= current_time < night_start:
+        status = "Afternoon Shift ☀️"
+        message = "Active Shift: 02:00 PM - 10:00 PM. Check-in active."
+        badge = "afternoon"
     else:
-        status = "School Closed 🌙"
-        message = "School day ended at 3:30 PM. See you tomorrow!"
-        badge = "closed"
+        status = "Night Shift 🌙"
+        message = "Active Shift: 10:00 PM - 06:00 AM. Check-in active."
+        badge = "night"
         
     milestones = [
-        {'time_str': '09:30 AM', 'time': start_time, 'label': 'Starts 🎒'},
-        {'time_str': '11:00 AM', 'time': recess1_start, 'label': 'Recess 🧸'},
-        {'time_str': '12:00 PM', 'time': lunch_start, 'label': 'Lunch 🍔'},
-        {'time_str': '02:00 PM', 'time': recess2_start, 'label': 'Recess 🧃'},
-        {'time_str': '03:30 PM', 'time': end_time, 'label': 'End 🚪'},
+        {'time_str': '06:00 AM', 'time': morning_start, 'label': 'Morning Shift 🌅'},
+        {'time_str': '02:00 PM', 'time': afternoon_start, 'label': 'Afternoon Shift ☀️'},
+        {'time_str': '10:00 PM', 'time': night_start, 'label': 'Night Shift 🌙'},
     ]
     
-    # Calculate status class for each milestone
     active_idx = -1
-    for idx, m in enumerate(milestones):
-        if current_time >= m['time']:
-            active_idx = idx
+    if morning_start <= current_time < afternoon_start:
+        active_idx = 0
+    elif afternoon_start <= current_time < night_start:
+        active_idx = 1
+    else:
+        active_idx = 2
             
     for idx, m in enumerate(milestones):
-        if current_time >= end_time:
-            m['status_class'] = 'completed'
-        elif idx < active_idx:
+        if idx < active_idx:
             m['status_class'] = 'completed'
         elif idx == active_idx:
             m['status_class'] = 'active'
@@ -99,152 +86,214 @@ def get_school_schedule_status():
         'milestones': milestones,
     }
 
+
 def home(request):
     return render(request, 'attendance/home.html')
 
-def student_grid(request):
-    selected_classroom_name = request.GET.get('classroom')
+
+def employee_grid(request):
+    selected_dept_name = request.GET.get('classroom')  # keep query param classroom for url continuity
     
-    # Get all active classrooms
-    all_classrooms = ClassroomOption.objects.filter(is_active=True).order_by('order')
+    # Get all active departments
+    all_depts = DepartmentOption.objects.filter(is_active=True).order_by('order')
     
-    # Default to first classroom if not provided
-    if not selected_classroom_name:
-        selected_classroom = all_classrooms.first()
-        if not selected_classroom:
-            return render(request, 'attendance/student_grid.html', {'error': 'No active classrooms found'})
-        selected_classroom_name = selected_classroom.name
-        selected_classroom_display = selected_classroom.display_value
+    # Default to first department if not provided
+    if not selected_dept_name:
+        selected_dept = all_depts.first()
+        if not selected_dept:
+            return render(request, 'attendance/student_grid.html', {'error': 'No active departments found'})
+        selected_dept_name = selected_dept.name
+        selected_dept_display = selected_dept.display_value
     else:
         try:
-            selected_classroom = all_classrooms.get(name=selected_classroom_name)
-            selected_classroom_display = selected_classroom.display_value
-        except ClassroomOption.DoesNotExist:
-            selected_classroom = all_classrooms.first()
-            if not selected_classroom:
-                return render(request, 'attendance/student_grid.html', {'error': 'No active classrooms found'})
-            selected_classroom_name = selected_classroom.name
-            selected_classroom_display = selected_classroom.display_value
+            selected_dept = all_depts.get(name=selected_dept_name)
+            selected_dept_display = selected_dept.display_value
+        except DepartmentOption.DoesNotExist:
+            selected_dept = all_depts.first()
+            if not selected_dept:
+                return render(request, 'attendance/student_grid.html', {'error': 'No active departments found'})
+            selected_dept_name = selected_dept.name
+            selected_dept_display = selected_dept.display_value
         
-    students = Student.objects.filter(classroom=selected_classroom_name, is_active=True).order_by('first_name')
+    employees = Employee.objects.filter(department=selected_dept_name, is_active=True).order_by('first_name')
     today = timezone.localdate()
     
-    # Prefetch today's attendance records to avoid N+1 queries
+    # Prefetch today's attendance and rosters
     today_attendances = {
-        att.student_id: att 
-        for att in Attendance.objects.filter(date=today, student__classroom=selected_classroom_name)
+        att.employee_id: att 
+        for att in Attendance.objects.filter(date=today, employee__department=selected_dept_name)
+    }
+    today_rosters = {
+        rost.employee_id: rost 
+        for rost in Roster.objects.filter(date=today, employee__department=selected_dept_name)
     }
     
-    # Attach attendance record to student objects
-    for student in students:
-        student.today_status = today_attendances.get(student.id)
+    # Attach status and roster to employee objects
+    for emp in employees:
+        emp.today_status = today_attendances.get(emp.id)
+        emp.roster_assigned = today_rosters.get(emp.id)
 
-    total_students = students.count()
-    present_today = sum(1 for s in students if s.today_status and s.today_status.status in ['present', 'late'])
-    attendance_rate = int((present_today / total_students * 100)) if total_students > 0 else 0
+    total_employees = employees.count()
+    present_today = sum(1 for e in employees if e.today_status and e.today_status.status in ['present', 'late'])
+    attendance_rate = int((present_today / total_employees * 100)) if total_employees > 0 else 0
     
-    classrooms_display = [(c.name, c.display_value) for c in all_classrooms]
-    mood_choices = Attendance.MOOD_CHOICES
-    current_time_period = Attendance.get_current_time_period()
+    depts_display = [(d.name, d.display_value) for d in all_depts]
+    current_shift = Attendance.get_current_shift_by_time()
 
     context = {
-        'students': students,
-        'selected_classroom': selected_classroom_display,
-        'selected_classroom_name': selected_classroom_name,
-        'classrooms': classrooms_display,
-        'total_students': total_students,
+        'students': employees,  # template compatibility
+        'selected_classroom': selected_dept_display,
+        'selected_classroom_name': selected_dept_name,
+        'classrooms': depts_display,
+        'total_students': total_employees,
         'present_today': present_today,
         'attendance_rate': attendance_rate,
-        'mood_choices': mood_choices,
         'today': today,
-        'current_time_period': current_time_period,
+        'current_time_period': current_shift,
         'layout_blocks': get_or_seed_layout_blocks(),
-        'schedule_status': get_school_schedule_status(),
+        'schedule_status': get_shift_schedule_status(),
     }
     return render(request, 'attendance/student_grid.html', context)
 
+
 @require_POST
 def toggle_attendance(request):
-    student_id = request.POST.get('student_id')
+    employee_id = request.POST.get('student_id') or request.POST.get('employee_id')
+    action = request.POST.get('action', 'check_in')  # 'check_in' or 'check_out'
     status = request.POST.get('status', 'present')
-    mood = request.POST.get('mood', None)
-    checked_by = request.POST.get('checked_by', 'child')
+    work_mode = request.POST.get('mood', 'office')  # maps mood field to work_mode
     
     try:
-        student = Student.objects.get(id=student_id, is_active=True)
-    except Student.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
-        
-    # Auto-late classification for child check-in
-    if checked_by == 'child' and status == 'present':
-        import datetime
-        local_now = timezone.localtime()
-        if local_now.time() >= datetime.time(9, 30):
-            status = 'late'
+        employee = Employee.objects.get(id=employee_id, is_active=True)
+    except Employee.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Employee not found'}, status=404)
         
     today = timezone.localdate()
-    attendance, created = Attendance.objects.get_or_create(
-        student=student, 
-        date=today,
-        defaults={'status': status, 'mood': mood, 'checked_in_by': checked_by}
-    )
+    attendance = Attendance.objects.filter(employee=employee, date=today).first()
     
-    if not created:
-        # If it already exists, let's toggle the status or update it
-        if attendance.status == status and checked_by == 'child' and not mood:
-            # If a kid double clicks their present card, reset it to absent (delete the record)
-            attendance.delete()
-            return JsonResponse({
-                'success': True,
-                'status': 'absent',
-                'action': 'removed',
-                'student_id': student_id
-            })
-        else:
-            # Update status, mood and checked_by
-            attendance.status = status
-            if mood:
-                attendance.mood = mood
-            attendance.checked_in_by = checked_by
+    if action == 'check_in':
+        if attendance:
+            # Already checked in, check if we need to update work mode
+            attendance.work_mode = work_mode
             attendance.save()
+        else:
+            # Determine roster shift or current time shift
+            roster = employee.today_roster()
+            shift = roster.shift if roster else Attendance.get_current_shift_by_time()
             
-    time_str = timezone.localtime(attendance.checked_in_at).strftime('%I:%M %p')
-    return JsonResponse({
-        'success': True,
-        'status': attendance.status,
-        'mood': attendance.mood,
-        'mood_emoji': attendance.get_mood_display().split()[-1] if attendance.mood else '',
-        'time': time_str,
-        'action': 'created' if created else 'updated',
-        'student_id': student_id
-    })
+            # Check if late based on shift
+            import datetime
+            local_now = timezone.localtime()
+            current_time = local_now.time()
+            is_late = False
+            
+            if shift == 'morning' and current_time > datetime.time(6, 15):
+                is_late = True
+            elif shift == 'afternoon' and current_time > datetime.time(14, 15):
+                is_late = True
+            elif shift == 'night' and current_time > datetime.time(22, 15):
+                is_late = True
+                
+            status = 'late' if is_late else 'present'
+            
+            attendance = Attendance.objects.create(
+                employee=employee,
+                date=today,
+                shift=shift,
+                status=status,
+                work_mode=work_mode,
+                checked_in_at=timezone.now()
+            )
+            
+        time_str = timezone.localtime(attendance.checked_in_at).strftime('%I:%M %p')
+        return JsonResponse({
+            'success': True,
+            'status': attendance.status,
+            'mood': attendance.work_mode,  # compatibility
+            'mood_emoji': attendance.get_work_mode_display().split()[-1] if attendance.work_mode else '',
+            'time': time_str,
+            'action': 'created',
+            'student_id': employee_id
+        })
+        
+    elif action == 'check_out':
+        if not attendance:
+            return JsonResponse({'success': False, 'error': 'Cannot check out without checking in first.'}, status=400)
+            
+        attendance.checked_out_at = timezone.now()
+        attendance.save()
+        
+        time_str = timezone.localtime(attendance.checked_out_at).strftime('%I:%M %p')
+        return JsonResponse({
+            'success': True,
+            'status': 'absent',  # triggers card reset/update in frontend logic (we will map it properly)
+            'mood': '',
+            'mood_emoji': '',
+            'time': time_str,
+            'hours_worked': attendance.hours_worked,
+            'action': 'removed',  # maps to action in JS
+            'student_id': employee_id
+        })
+        
+    return JsonResponse({'success': False, 'error': 'Invalid action'}, status=400)
+
 
 @require_POST
 def verify_pin(request):
-    student_id = request.POST.get('student_id')
+    employee_id = request.POST.get('student_id') or request.POST.get('employee_id')
     pin_code = request.POST.get('pin_code')
     try:
-        student = Student.objects.get(id=student_id, is_active=True)
-        if student.pin_code == pin_code:
-            return JsonResponse({'success': True})
+        employee = Employee.objects.get(id=employee_id, is_active=True)
+        if employee.pin_code == pin_code:
+            att = employee.today_attendance()
+            roster = employee.today_roster()
+            
+            state = 'not_checked_in'
+            check_in_time = '-'
+            check_out_time = '-'
+            hours_worked = 0.0
+            
+            if att:
+                if att.checked_out_at:
+                    state = 'checked_out'
+                    check_out_time = timezone.localtime(att.checked_out_at).strftime('%I:%M %p')
+                else:
+                    state = 'checked_in'
+                check_in_time = timezone.localtime(att.checked_in_at).strftime('%I:%M %p')
+                hours_worked = att.hours_worked
+                
+            rostered_shift = roster.get_shift_display() if roster else 'Not Rostered (Default Shift)'
+            rostered_shift_key = roster.shift if roster else 'none'
+            
+            return JsonResponse({
+                'success': True,
+                'state': state,
+                'check_in_time': check_in_time,
+                'check_out_time': check_out_time,
+                'hours_worked': hours_worked,
+                'rostered_shift': rostered_shift,
+                'rostered_shift_key': rostered_shift_key,
+                'work_mode': att.work_mode if att else 'office'
+            })
         else:
             return JsonResponse({'success': False, 'error': 'Invalid PIN. Please try again! 🤫'})
-    except Student.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Student not found.'}, status=404)
+    except Employee.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Employee not found.'}, status=404)
 
-def teacher_login(request):
+
+def manager_login(request):
     if request.user.is_authenticated:
         return redirect('teacher_dashboard')
         
-    students = Student.objects.filter(is_active=True).order_by('classroom', 'first_name')
-    classrooms = ClassroomOption.objects.filter(is_active=True).order_by('order')
+    employees = Employee.objects.filter(is_active=True).order_by('department', 'first_name')
+    depts = DepartmentOption.objects.filter(is_active=True).order_by('order')
     
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             auth_login(request, user)
-            messages.success(request, f"Welcome back, Teacher {user.username}! 🍎")
+            messages.success(request, f"Welcome back, Manager {user.username}! 💼")
             return redirect('teacher_dashboard')
         else:
             messages.error(request, "Invalid username or password. Please try again.")
@@ -254,13 +303,14 @@ def teacher_login(request):
     context = {
         'form': form,
         'action': 'login',
-        'students': students,
-        'classrooms': classrooms,
-        'schedule_status': get_school_schedule_status(),
+        'students': employees,
+        'classrooms': depts,
+        'schedule_status': get_shift_schedule_status(),
     }
     return render(request, 'attendance/login.html', context)
 
-def teacher_register(request):
+
+def manager_register(request):
     if request.user.is_authenticated:
         return redirect('teacher_dashboard')
     if request.method == 'POST':
@@ -268,7 +318,7 @@ def teacher_register(request):
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
-            messages.success(request, f"Registration successful! Welcome, Teacher {user.username}! 🏫")
+            messages.success(request, f"Registration successful! Welcome, Manager {user.username}! 🏢")
             return redirect('teacher_dashboard')
         else:
             messages.error(request, "Registration failed. Please correct the errors below.")
@@ -276,37 +326,56 @@ def teacher_register(request):
         form = UserCreationForm()
     return render(request, 'attendance/login.html', {'form': form, 'action': 'register'})
 
-def teacher_logout(request):
+
+def manager_logout(request):
     auth_logout(request)
     messages.info(request, "You have been logged out. See you soon! 👋")
     return redirect('student_grid')
 
+
 @login_required(login_url='teacher_login')
-def teacher_dashboard(request):
+def manager_dashboard(request):
     today = timezone.localdate()
-    classroom_filter = request.GET.get('classroom', 'All')
+    dept_filter = request.GET.get('classroom', 'All')
     
-    # Calculate metrics
-    students_query = Student.objects.filter(is_active=True)
+    # Parse roster date from query parameters (defaults to today)
+    roster_date_str = request.GET.get('roster_date')
+    if roster_date_str:
+        try:
+            roster_date = timezone.datetime.strptime(roster_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            roster_date = today
+    else:
+        roster_date = today
+        
+    # Calculate metrics (real-time stats are always for today)
+    employees_query = Employee.objects.filter(is_active=True)
     attendance_query = Attendance.objects.filter(date=today)
     
-    if classroom_filter != 'All':
-        students_query = students_query.filter(classroom=classroom_filter)
-        attendance_query = attendance_query.filter(student__classroom=classroom_filter)
-        
-    students = students_query.order_by('classroom', 'first_name')
-    total_students = students.count()
+    # Fetch roster assignments for the selected roster date
+    rosters_query = Roster.objects.filter(date=roster_date)
     
-    # Map attendance details for easy checking
-    attendance_map = {att.student_id: att for att in attendance_query}
+    if dept_filter != 'All':
+        employees_query = employees_query.filter(department=dept_filter)
+        attendance_query = attendance_query.filter(employee__department=dept_filter)
+        rosters_query = rosters_query.filter(employee__department=dept_filter)
+        
+    employees = employees_query.order_by('department', 'first_name')
+    total_employees = employees.count()
+    
+    # Map attendance and roster details for easy lookup
+    attendance_map = {att.employee_id: att for att in attendance_query}
+    roster_map = {rost.employee_id: rost for rost in rosters_query}
     
     present_count = 0
     late_count = 0
     absent_count = 0
     
-    for student in students:
-        att = attendance_map.get(student.id)
-        student.today_status = att
+    for emp in employees:
+        att = attendance_map.get(emp.id)
+        rost = roster_map.get(emp.id)
+        emp.today_status = att
+        emp.today_roster = rost  # holds roster for the selected date
         if att:
             if att.status == 'present':
                 present_count += 1
@@ -317,124 +386,170 @@ def teacher_dashboard(request):
         else:
             absent_count += 1
 
-    attendance_percentage = int(( (present_count + late_count) / total_students * 100)) if total_students > 0 else 0
+    attendance_percentage = int(((present_count + late_count) / total_employees * 100)) if total_employees > 0 else 0
 
-    active_classrooms = ClassroomOption.objects.filter(is_active=True).order_by('order')
-    classrooms = [('All', 'All Classes 🏫')] + [(c.name, c.display_value) for c in active_classrooms]
+    active_depts = DepartmentOption.objects.filter(is_active=True).order_by('order')
+    depts = [('All', 'All Departments 🏢')] + [(d.name, d.display_value) for d in active_depts]
 
-    # Check if this teacher can raise tickets
+    # Check support permissions
     can_raise_support = False
     tickets_list = []
     if request.user.is_authenticated:
         can_raise_support = request.user.is_superuser
         if not can_raise_support:
-            from .models import TeacherSupportPermission
-            perm, created = TeacherSupportPermission.objects.get_or_create(user=request.user)
-            can_raise_support = perm.can_raise_tickets
+            perm, created = EmployeeSupportPermission.objects.get_or_create(user=request.user)
+            can_raise_tickets = perm.can_raise_tickets if perm else False
+            can_raise_support = can_raise_tickets
             
         if can_raise_support:
             tickets_list = SupportTicket.objects.all().order_by('-created_at')
 
     context = {
-        'students': students,
+        'students': employees,
         'today': today,
-        'total_students': total_students,
+        'roster_date': roster_date,
+        'roster_date_str': roster_date.strftime('%Y-%m-%d'),
+        'total_students': total_employees,
         'present_count': present_count,
         'late_count': late_count,
         'absent_count': absent_count,
         'attendance_percentage': attendance_percentage,
-        'classrooms': classrooms,
-        'selected_classroom': classroom_filter,
-        'schedule_status': get_school_schedule_status(),
-        'current_time_period': Attendance.get_current_time_period(),
+        'classrooms': depts,
+        'selected_classroom': dept_filter,
+        'schedule_status': get_shift_schedule_status(),
+        'current_time_period': Attendance.get_current_shift_by_time(),
         'can_raise_support': can_raise_support,
         'tickets_list': tickets_list,
     }
     return render(request, 'attendance/teacher_dashboard.html', context)
 
-@login_required(login_url='teacher_login')
-def add_student(request):
-    if request.method == 'POST':
-        form = StudentForm(request.POST)
-        if form.is_valid():
-            student = form.save()
-            messages.success(request, f"Welcome to the school, {student.full_name}! 🎉")
-            return redirect('teacher_dashboard')
-    else:
-        form = StudentForm()
-        
-    return render(request, 'attendance/student_form.html', {'form': form, 'title': 'Add New Student 🐣'})
 
 @login_required(login_url='teacher_login')
-def edit_student(request, pk):
-    student = get_object_or_404(Student, id=pk)
+def add_employee(request):
     if request.method == 'POST':
-        form = StudentForm(request.POST, instance=student)
+        form = EmployeeForm(request.POST)
+        if form.is_valid():
+            employee = form.save()
+            messages.success(request, f"Welcome to the company, {employee.full_name}! 🎉")
+            return redirect('teacher_dashboard')
+    else:
+        form = EmployeeForm()
+        
+    return render(request, 'attendance/student_form.html', {'form': form, 'title': 'Add New Employee 👔'})
+
+
+@login_required(login_url='teacher_login')
+def edit_employee(request, pk):
+    employee = get_object_or_404(Employee, id=pk)
+    if request.method == 'POST':
+        form = EmployeeForm(request.POST, instance=employee)
         if form.is_valid():
             form.save()
-            messages.success(request, f"Updated details for {student.full_name}! 📝")
+            messages.success(request, f"Updated details for {employee.full_name}! 📝")
             return redirect('teacher_dashboard')
     else:
-        form = StudentForm(instance=student)
+        form = EmployeeForm(instance=employee)
         
-    return render(request, 'attendance/student_form.html', {'form': form, 'title': f'Edit Details for {student.first_name} ✏️'})
+    return render(request, 'attendance/student_form.html', {'form': form, 'title': f'Edit Details for {employee.first_name} ✏️'})
+
 
 @login_required(login_url='teacher_login')
-def delete_student(request, pk):
-    student = get_object_or_404(Student, id=pk)
+def delete_employee(request, pk):
+    employee = get_object_or_404(Employee, id=pk)
     if request.method == 'POST':
-        student.is_active = False  # Soft delete
-        student.save()
-        messages.warning(request, f"Goodbye {student.full_name}! 👋")
+        employee.is_active = False  # Soft delete
+        employee.save()
+        messages.warning(request, f"Goodbye {employee.full_name}! 👋")
         return redirect('teacher_dashboard')
-    return render(request, 'attendance/student_confirm_delete.html', {'student': student})
+    return render(request, 'attendance/student_confirm_delete.html', {'student': employee})
 
 
 @login_required(login_url='teacher_login')
-def export_student_csv(request):
-    classroom_filter = request.GET.get('classroom', 'All')
+def export_attendance_csv(request):
+    dept_filter = request.GET.get('classroom', 'All')
     
-    # Filter active students based on classroom
-    students = Student.objects.filter(is_active=True)
-    if classroom_filter != 'All':
-        students = students.filter(classroom=classroom_filter)
+    employees = Employee.objects.filter(is_active=True)
+    if dept_filter != 'All':
+        employees = employees.filter(department=dept_filter)
         
-    students = students.order_by('classroom', 'first_name')
+    employees = employees.order_by('department', 'first_name')
     today = timezone.localdate()
     
-    # Today's attendance pre-fetch
     today_attendances = {
-        att.student_id: att 
+        att.employee_id: att 
         for att in Attendance.objects.filter(date=today)
+    }
+    today_rosters = {
+        rost.employee_id: rost 
+        for rost in Roster.objects.filter(date=today)
     }
     
     response = HttpResponse(content_type='text/csv')
-    filename = f"kindergarten_attendance_{classroom_filter}_{today}.csv"
+    filename = f"employee_attendance_{dept_filter}_{today}.csv"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     writer = csv.writer(response)
     writer.writerow([
-        'Student ID', 'First Name', 'Last Name', 'Classroom', 
-        'Avatar Emoji', 'Today Status', 'Today Mood', 'Time Period', 'Today Check-in Time'
+        'Employee ID', 'First Name', 'Last Name', 'Department', 
+        'Rostered Shift', 'Work Status', 'Work Mode', 'Check-in Time', 'Check-out Time', 'Hours Worked'
     ])
     
-    for s in students:
-        att = today_attendances.get(s.id)
-        status = att.status if att else 'absent'
-        mood = att.get_mood_display() if (att and att.mood) else '-'
-        time_period = att.get_time_period_display() if (att and att.time_period) else '-'
+    for emp in employees:
+        att = today_attendances.get(emp.id)
+        rost = today_rosters.get(emp.id)
         
-        if att and att.status != 'absent':
-            checkin_time = timezone.localtime(att.checked_in_at).strftime('%I:%M %p')
-        else:
-            checkin_time = '-'
+        rostered_shift = rost.get_shift_display() if rost else '-'
+        status = att.get_status_display() if att else 'Absent ❌'
+        work_mode = att.get_work_mode_display() if att else '-'
+        
+        checkin_time = timezone.localtime(att.checked_in_at).strftime('%I:%M %p') if (att and att.checked_in_at) else '-'
+        checkout_time = timezone.localtime(att.checked_out_at).strftime('%I:%M %p') if (att and att.checked_out_at) else '-'
+        hours_worked = att.hours_worked if att else 0.0
             
         writer.writerow([
-            s.id, s.first_name, s.last_name, s.classroom,
-            s.avatar_emoji, status.capitalize(), mood, time_period, checkin_time
+            emp.id, emp.first_name, emp.last_name, emp.department,
+            rostered_shift, status, work_mode, checkin_time, checkout_time, hours_worked
         ])
         
     return response
+
+
+@login_required(login_url='teacher_login')
+def assign_roster_shift(request):
+    date_str = request.POST.get('date')
+    classroom = request.POST.get('classroom')
+    
+    if request.method == 'POST':
+        employee_id = request.POST.get('employee_id')
+        shift = request.POST.get('shift')
+        
+        try:
+            date = timezone.datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else timezone.localdate()
+            employee = Employee.objects.get(id=employee_id, is_active=True)
+            
+            if shift == 'none':
+                Roster.objects.filter(employee=employee, date=date).delete()
+                messages.success(request, f"Removed shift assignment for {employee.full_name}.")
+            else:
+                roster, created = Roster.objects.update_or_create(
+                    employee=employee,
+                    date=date,
+                    defaults={'shift': shift}
+                )
+                messages.success(request, f"Assigned {employee.full_name} to {roster.get_shift_display()} on {date}.")
+        except Exception as e:
+            messages.error(request, f"Failed to assign roster shift: {e}")
+            
+    # Redirect back, preserving date and classroom query parameters
+    redirect_url = '/manager/'
+    params = []
+    if date_str:
+        params.append(f"roster_date={date_str}")
+    if classroom:
+        params.append(f"classroom={classroom}")
+    if params:
+        redirect_url += '?' + '&'.join(params)
+    return redirect(redirect_url)
 
 
 @login_required(login_url='teacher_login')
@@ -448,7 +563,7 @@ def admin_developer_page(request):
     if request.method == 'POST' and 'toggle_support_user_id' in request.POST:
         user_id = request.POST.get('toggle_support_user_id')
         user_to_toggle = get_object_or_404(User, pk=user_id)
-        perm, created = TeacherSupportPermission.objects.get_or_create(user=user_to_toggle)
+        perm, created = EmployeeSupportPermission.objects.get_or_create(user=user_to_toggle)
         perm.can_raise_tickets = not perm.can_raise_tickets
         perm.save()
         messages.success(request, f"Updated support ticket permissions for {user_to_toggle.username} to: {perm.can_raise_tickets}")
@@ -460,7 +575,7 @@ def admin_developer_page(request):
     all_users = User.objects.all().order_by('username')
     teachers_permissions = []
     for user in all_users:
-        perm, created = TeacherSupportPermission.objects.get_or_create(user=user)
+        perm, created = EmployeeSupportPermission.objects.get_or_create(user=user)
         display_allowed = True if user.is_superuser else perm.can_raise_tickets
         teachers_permissions.append({
             'user': user,
@@ -501,35 +616,31 @@ def ai_chat_command(request):
         return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
         
     import json
-    import re
-    import urllib.request
-    import urllib.error
     
     try:
         data = json.loads(request.body)
         user_message = data.get('message', '').strip().lower()
         api_key = data.get('api_key', '').strip()
         
-        # Default action structures
         action = None
         target_block = None
         message_response = ""
         
-        # 1. Run live Gemini API call if key is provided
         if api_key:
             system_prompt = (
-                "You are an AI assistant for a Kindergarten Attendance app layout customizer. "
+                "You are an AI assistant for an Employee Attendance app layout customizer. "
                 "Available blocks are: 'header', 'classroom_tabs', 'stats_banner', 'student_grid'.\n"
                 "Understand the user request and map it to a JSON response of this exact schema:\n"
                 "{\n"
                 "  \"action\": \"hide\" | \"show\" | \"move_top\" | \"move_bottom\" | \"reset\",\n"
                 "  \"block\": \"header\" | \"classroom_tabs\" | \"stats_banner\" | \"student_grid\" | null,\n"
-                "  \"reply\": \"A friendly short response to the user explaining what you did in child-like tone ✨\"\n"
+                "  \"reply\": \"A friendly short response to the user explaining what you did in corporate-like professional tone ✨\"\n"
                 "}\n"
                 "Only reply with the JSON block. Do not write explanation outside the JSON."
             )
             
             try:
+                import urllib.request
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
                 req_headers = {'Content-Type': 'application/json'}
                 req_payload = {
@@ -555,12 +666,9 @@ def ai_chat_command(request):
                     target_block = json_res.get('block')
                     message_response = json_res.get('reply', '')
             except Exception as api_err:
-                # Fall back to offline parser on API failures
                 message_response = f"(Gemini API error, using offline backup) "
         
-        # 2. Local Command Parser (Offline Fallback or Direct Matching)
         if not action:
-            # Fuzzy match keywords
             if any(k in user_message for k in ['reset', 'default', 'restore']):
                 action = 'reset'
                 message_response += "Resetting everything back to the default order! 🌟"
@@ -568,87 +676,83 @@ def ai_chat_command(request):
                 action = 'hide'
                 if any(x in user_message for x in ['stat', 'banner', 'metric', 'pill']):
                     target_block = 'stats_banner'
-                    message_response += "Poof! I hid the Roster Stats Banner for you. ☁️"
-                elif any(x in user_message for x in ['classroom', 'tab', 'class', 'picker']):
+                    message_response += "Stats banner has been hidden. ☁️"
+                elif any(x in user_message for x in ['classroom', 'tab', 'class', 'picker', 'department', 'dept']):
                     target_block = 'classroom_tabs'
-                    message_response += "Okay, I hid the Classroom Selection Tabs! 🐝"
+                    message_response += "Department tabs are now hidden."
                 elif any(x in user_message for x in ['header', 'logo', 'title', 'brand']):
                     target_block = 'header'
-                    message_response += "Done! I hid the branding Header section. 🏫"
-                elif any(x in user_message for x in ['grid', 'student', 'roster', 'kid', 'card']):
+                    message_response += "Header has been hidden."
+                elif any(x in user_message for x in ['grid', 'student', 'roster', 'employee', 'card']):
                     target_block = 'student_grid'
-                    message_response += "Hiding the Student Roster Grid! 🐣"
+                    message_response += "Employee grid has been hidden."
                 else:
                     action = None
             elif any(k in user_message for k in ['show', 'display', 'enable', 'visible', 'add', 'reveal']):
                 action = 'show'
                 if any(x in user_message for x in ['stat', 'banner', 'metric', 'pill']):
                     target_block = 'stats_banner'
-                    message_response += "Yay! The Roster Stats Banner is back on display. ☀️"
-                elif any(x in user_message for x in ['classroom', 'tab', 'class', 'picker']):
+                    message_response += "Stats banner is now visible."
+                elif any(x in user_message for x in ['classroom', 'tab', 'class', 'picker', 'department', 'dept']):
                     target_block = 'classroom_tabs'
-                    message_response += "Tada! Classroom tabs are now visible. 🦋"
+                    message_response += "Department tabs are now visible."
                 elif any(x in user_message for x in ['header', 'logo', 'title', 'brand']):
                     target_block = 'header'
-                    message_response += "The header card is back at the top! 🎒"
-                elif any(x in user_message for x in ['grid', 'student', 'roster', 'kid', 'card']):
+                    message_response += "Header is now visible."
+                elif any(x in user_message for x in ['grid', 'student', 'roster', 'employee', 'card']):
                     target_block = 'student_grid'
-                    message_response += "Making the Student Roster Grid visible again! 🎒"
+                    message_response += "Employee grid is now visible."
                 else:
                     action = None
             elif any(k in user_message for k in ['top', 'above', 'start', 'first', 'up']):
                 action = 'move_top'
                 if any(x in user_message for x in ['stat', 'banner', 'metric', 'pill']):
                     target_block = 'stats_banner'
-                    message_response += "Metrics banner moved to the top! 📊"
-                elif any(x in user_message for x in ['classroom', 'tab', 'class', 'picker']):
+                    message_response += "Metrics banner moved to the top!"
+                elif any(x in user_message for x in ['classroom', 'tab', 'class', 'picker', 'department', 'dept']):
                     target_block = 'classroom_tabs'
-                    message_response += "Classroom tabs are sorted to the top! 🐝"
+                    message_response += "Department tabs moved to the top."
                 elif any(x in user_message for x in ['header', 'logo', 'title', 'brand']):
                     target_block = 'header'
-                    message_response += "Header is now placed at the very top of the page! 🏫"
-                elif any(x in user_message for x in ['grid', 'student', 'roster', 'kid', 'card']):
+                    message_response += "Header moved to the top."
+                elif any(x in user_message for x in ['grid', 'student', 'roster', 'employee', 'card']):
                     target_block = 'student_grid'
-                    message_response += "Zoom! I moved the Student Roster Grid right to the top! 🚀"
+                    message_response += "Employee grid moved to the top."
                 else:
                     action = None
             elif any(k in user_message for k in ['bottom', 'below', 'end', 'last', 'down']):
                 action = 'move_bottom'
                 if any(x in user_message for x in ['stat', 'banner', 'metric', 'pill']):
                     target_block = 'stats_banner'
-                    message_response += "Metrics stats are now placed at the bottom. 📉"
-                elif any(x in user_message for x in ['classroom', 'tab', 'class', 'picker']):
+                    message_response += "Metrics banner moved to the bottom."
+                elif any(x in user_message for x in ['classroom', 'tab', 'class', 'picker', 'department', 'dept']):
                     target_block = 'classroom_tabs'
-                    message_response += "Classroom tabs are sorted to the bottom! 📉"
+                    message_response += "Department tabs moved to the bottom."
                 elif any(x in user_message for x in ['header', 'logo', 'title', 'brand']):
                     target_block = 'header'
-                    message_response += "Header is now placed at the very bottom of the page. 📉"
-                elif any(x in user_message for x in ['grid', 'student', 'roster', 'kid', 'card']):
+                    message_response += "Header moved to the bottom."
+                elif any(x in user_message for x in ['grid', 'student', 'roster', 'employee', 'card']):
                     target_block = 'student_grid'
-                    message_response += "Sent the Student Grid to the bottom of the page. 📉"
+                    message_response += "Employee grid moved to the bottom."
                 else:
                     action = None
 
-            # If fuzzy parsing didn't match any block or action
             if not action or (action != 'reset' and not target_block):
                 action = None
-                message_response = "Hmm, I didn't quite get that command. Try 'hide stats banner', 'move grid to top', or 'reset layout'! 🧸"
+                message_response = "I did not recognize that command. Try 'hide stats banner', 'move student_grid to top', or 'reset layout'!"
         
-        # 3. Execute database actions based on parsed command
         if action:
             if action == 'hide' and target_block:
                 AppLayoutBlock.objects.filter(block_id=target_block).update(is_visible=False)
             elif action == 'show' and target_block:
                 AppLayoutBlock.objects.filter(block_id=target_block).update(is_visible=True)
             elif action == 'move_top' and target_block:
-                # Set target order to 0, shift others, then normalize
                 AppLayoutBlock.objects.filter(block_id=target_block).update(order=0)
                 all_blocks = list(AppLayoutBlock.objects.all().order_by('order'))
                 for idx, b in enumerate(all_blocks):
                     b.order = idx + 1
                     b.save()
             elif action == 'move_bottom' and target_block:
-                # Set target order to 99, shift others, then normalize
                 AppLayoutBlock.objects.filter(block_id=target_block).update(order=99)
                 all_blocks = list(AppLayoutBlock.objects.all().order_by('order'))
                 for idx, b in enumerate(all_blocks):
@@ -659,7 +763,6 @@ def ai_chat_command(request):
                 for bid, o in default_blocks.items():
                     AppLayoutBlock.objects.filter(block_id=bid).update(order=o, is_visible=True)
         
-        # Return state response
         updated_blocks = list(AppLayoutBlock.objects.all().order_by('order').values('block_id', 'title', 'order', 'is_visible'))
         return JsonResponse({
             'success': True,
@@ -672,13 +775,12 @@ def ai_chat_command(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
+
 def schedule_context_processor(request):
     engineers_all = []
     active_engineer = None
     can_raise_support = False
     try:
-        # Import dynamically to avoid circular references
-        from .models import SupportEngineer, TeacherSupportPermission
         engineers_all = list(SupportEngineer.objects.all())
         active_engineer_id = request.session.get('engineer_id', '')
         if active_engineer_id:
@@ -688,13 +790,13 @@ def schedule_context_processor(request):
             if request.user.is_superuser:
                 can_raise_support = True
             else:
-                perm, created = TeacherSupportPermission.objects.get_or_create(user=request.user)
+                perm, created = EmployeeSupportPermission.objects.get_or_create(user=request.user)
                 can_raise_support = perm.can_raise_tickets
     except Exception:
         pass
 
     return {
-        'schedule_status': get_school_schedule_status(),
+        'schedule_status': get_shift_schedule_status(),
         'engineers_all': engineers_all,
         'active_engineer': active_engineer,
         'can_raise_support': can_raise_support,
@@ -719,15 +821,14 @@ def ensure_support_seeded():
         
         # Create a default ticket
         t = SupportTicket.objects.create(
-            caller="Teacher Jenny",
-            subject="Classroom emojis not loading correctly",
-            description="The Butterflies classroom layout seems to have lost its custom pink avatar coloring in the grid view. Please restore it.",
+            caller="Manager Jenny",
+            subject="Department emojis not loading correctly",
+            description="The Engineering department layout seems to have lost its custom branding color in the grid view. Please restore it.",
             priority="moderate",
             state="new",
             assignment_group=l2
         )
         
-        # Seed activity log for it
         TicketActivity.objects.create(
             ticket=t,
             activity_type="work_note",
@@ -738,7 +839,7 @@ def ensure_support_seeded():
             ticket=t,
             activity_type="customer_comment",
             author="System Seeder",
-            content="Hello Teacher Jenny, we have logged this ticket and assigned it to our L2 support group. An engineer will follow up shortly."
+            content="Hello Manager Jenny, we have logged this ticket and assigned it to our L2 support group. An engineer will follow up shortly."
         )
 
 
@@ -747,7 +848,7 @@ def has_support_permission(user):
         return False
     if user.is_superuser:
         return True
-    perm, created = TeacherSupportPermission.objects.get_or_create(user=user)
+    perm, created = EmployeeSupportPermission.objects.get_or_create(user=user)
     return perm.can_raise_tickets
 
 
@@ -785,17 +886,15 @@ def support_home(request):
                 priority=priority,
                 state='new'
             )
-            # Create system comment
             TicketActivity.objects.create(
                 ticket=ticket,
                 activity_type='customer_comment',
                 author='System Desk',
-                content=f"Ticket '{ticket.number}' has been created successfully. Welcome to our Kindergarten support queue!"
+                content=f"Ticket '{ticket.number}' has been created successfully. Welcome to our workforce support queue!"
             )
             messages.success(request, f"Ticket {ticket.number} has been created successfully!")
             return redirect('support_ticket_view', number=ticket.number)
             
-    # Fetch all created support tickets for list/grid view
     tickets = SupportTicket.objects.all().order_by('-created_at')
     
     return render(request, 'attendance/support_home.html', {
@@ -829,7 +928,6 @@ def support_ticket_view(request, number):
             messages.success(request, "Your comment has been added successfully.")
             return redirect('support_ticket_view', number=ticket.number)
             
-    # Fetch public comments only
     activities = ticket.activities.filter(activity_type='customer_comment').order_by('created_at')
     
     return render(request, 'attendance/support_ticket_detail.html', {
@@ -842,7 +940,6 @@ def engineer_login_required(view_func):
     def wrapper(request, *args, **kwargs):
         if not request.session.get('engineer_id'):
             return redirect('engineer_login')
-        from .models import SupportEngineer
         eng = SupportEngineer.objects.filter(pk=request.session['engineer_id'], is_active=True).first()
         if not eng:
             if 'engineer_id' in request.session:
@@ -864,7 +961,6 @@ def engineer_login_view(request):
         if not email or not password:
             messages.error(request, "Please enter both email and password.")
         else:
-            from .models import SupportEngineer
             eng = SupportEngineer.objects.filter(email__iexact=email).first()
             if eng and eng.password == password:
                 if not eng.is_active:
@@ -883,14 +979,13 @@ def engineer_logout_view(request):
     if 'engineer_id' in request.session:
         del request.session['engineer_id']
     messages.success(request, "Logged out of IT Tech Services portal.")
-    return redirect('engineer_login')
+    return render(request, 'attendance/support/engineer_logout.html')
 
 
 @engineer_login_required
 def engineer_dashboard(request):
     ensure_support_seeded()
     
-    # Filter by group or state if requested
     group_filter = request.GET.get('group', '')
     state_filter = request.GET.get('state', '')
     priority_filter = request.GET.get('priority', '')
@@ -906,7 +1001,6 @@ def engineer_dashboard(request):
     groups = AssignmentGroup.objects.all()
     engineers = SupportEngineer.objects.all()
     
-    # Active engineer identity for simulation
     active_engineer_id = request.session.get('active_engineer_id', '')
     active_engineer = None
     if active_engineer_id:
@@ -921,7 +1015,6 @@ def engineer_dashboard(request):
                 del request.session['active_engineer_id']
         return redirect('engineer_dashboard')
 
-    # Compile ticket breakdown per engineer
     engineer_breakdown = []
     for eng in SupportEngineer.objects.filter(is_active=True):
         total_assigned = eng.assigned_tickets.count()
@@ -936,7 +1029,6 @@ def engineer_dashboard(request):
         })
     engineer_breakdown.sort(key=lambda x: x['active_count'], reverse=True)
 
-    # Calculate SLA status counts
     sla_breached_count = 0
     active_sla_count = 0
     unassigned_count = SupportTicket.objects.filter(assigned_to__isnull=True).exclude(state__in=['resolved', 'closed']).count()
@@ -967,23 +1059,19 @@ def engineer_ticket_detail(request, number):
     ensure_support_seeded()
     ticket = get_object_or_404(SupportTicket, number=number)
     
-    # Get active simulation engineer
     active_engineer_id = request.session.get('active_engineer_id', '')
     active_engineer = None
     if active_engineer_id:
         active_engineer = SupportEngineer.objects.filter(pk=active_engineer_id).first()
         
     if request.method == 'POST':
-        # Update metadata
         state = request.POST.get('state', '')
         priority = request.POST.get('priority', '')
         group_id = request.POST.get('assignment_group', '')
         assigned_id = request.POST.get('assigned_to', '')
         
-        # Determine who is posting
         author_name = active_engineer.name if active_engineer else "Support System"
         
-        # Handle fields update
         if state:
             ticket.state = state
         if priority:
@@ -1001,7 +1089,6 @@ def engineer_ticket_detail(request, number):
             
         ticket.save()
         
-        # Handle Work Note or Customer Comment
         work_note_content = request.POST.get('work_note', '').strip()
         customer_comment_content = request.POST.get('customer_comment', '').strip()
         
@@ -1027,7 +1114,6 @@ def engineer_ticket_detail(request, number):
         return redirect('engineer_ticket_detail', number=ticket.number)
         
     groups = AssignmentGroup.objects.all()
-    # If the ticket is assigned to a group, filter engineers of that group
     engineers = SupportEngineer.objects.all()
     if ticket.assignment_group:
         engineers = engineers.filter(groups=ticket.assignment_group)
@@ -1198,16 +1284,14 @@ def group_delete(request, pk):
 @engineer_login_required
 def identity_manager(request):
     ensure_support_seeded()
-    from .models import SupportEngineer, AssignmentGroup, TeacherSupportPermission
-    from django.contrib.auth.models import User
-
+    
     if request.method == 'POST':
         action = request.POST.get('action')
         
         if action == 'toggle_teacher_permission':
             user_id = request.POST.get('user_id')
             user_to_toggle = get_object_or_404(User, pk=user_id)
-            perm, created = TeacherSupportPermission.objects.get_or_create(user=user_to_toggle)
+            perm, created = EmployeeSupportPermission.objects.get_or_create(user=user_to_toggle)
             perm.can_raise_tickets = not perm.can_raise_tickets
             perm.save()
             messages.success(request, f"Updated support ticket permissions for {user_to_toggle.username} to: {perm.can_raise_tickets}")
@@ -1217,9 +1301,7 @@ def identity_manager(request):
             engineer_id = request.POST.get('engineer_id')
             engineer = get_object_or_404(SupportEngineer, pk=engineer_id)
             group_ids = request.POST.getlist('groups')
-            # Convert string IDs to integers
             group_pks = [int(gid) for gid in group_ids if gid.isdigit()]
-            # Set the engineer's groups
             engineer.groups.set(AssignmentGroup.objects.filter(pk__in=group_pks))
             engineer.save()
             messages.success(request, f"Updated assignment groups for engineer {engineer.name}.")
@@ -1233,15 +1315,13 @@ def identity_manager(request):
             messages.success(request, f"Updated admin (is_staff) status for {user_to_toggle.username} to: {user_to_toggle.is_staff}")
             return redirect('identity_manager')
 
-    # Fetch users, engineers, groups
     users = User.objects.all().order_by('username')
     engineers = SupportEngineer.objects.all().order_by('name')
     groups = AssignmentGroup.objects.all().order_by('name')
 
-    # Build template context helper mapping permissions
     user_perms = []
     for u in users:
-        perm, created = TeacherSupportPermission.objects.get_or_create(user=u)
+        perm, created = EmployeeSupportPermission.objects.get_or_create(user=u)
         user_perms.append({
             'user': u,
             'can_raise': perm.can_raise_tickets or u.is_superuser
@@ -1252,6 +1332,3 @@ def identity_manager(request):
         'engineers': engineers,
         'groups': groups,
     })
-
-
-

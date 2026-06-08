@@ -1,236 +1,102 @@
-# 🏫 FocusFlow Kindergarten Attendance Application
+# ⏰ Leoxur Solutions Limited - Employee Time & Expense Portal
 
-Welcome to the **FocusFlow Kindergarten Attendance Application**! This project is a kid-friendly, playful, and responsive web application designed for classroom check-ins, mood tracking, and teacher-led classroom management. It features a bubbly custom UI, real-time confetti rewards, an automated announcement ticker bar synchronized with school hours, and an AI-powered visual layout builder.
+Welcome to the **Employee Time & Expense Portal** by **Leoxur Solutions Limited**! This project is a modern, responsive enterprise application designed for employee shift check-ins, check-outs, dynamic hours tracking, interactive roster planning, and unified manager oversight. It also features a fully functional ServiceNow-style IT Tech Support portal.
 
 ---
 
 ## 📐 Application Architecture
 
-The application is built on top of **Django** and styled using vanilla CSS with custom kid-themed components. Below is a high-level system layout showing how components interact:
+The application is built using the **Django** framework and styled with vanilla CSS (leveraging Outfit and Inter web fonts) to create a premium, glassmorphic corporate dashboard. 
 
 ```mermaid
 graph TD
     Browser[Web Browser / Client] -->|HTTP Request| DjangoURLs[Django urls.py]
     DjangoURLs -->|Routes to| DjangoViews[Django views.py]
     
-    DjangoViews -->|Fetches Layout & Data| DB[(SQLite Database)]
-    DjangoViews -->|Appends Ticker Status| ContextProc[schedule_context_processor]
+    DjangoViews -->|Fetches Rosters & Logs| DB[(SQLite Database)]
+    DjangoViews -->|Appends Shift Status| ContextProc[schedule_context_processor]
     
     DjangoViews -->|Renders| Templates[HTML Templates]
     Templates -->|Uses Styles & Scripts| StaticFiles[CSS & JavaScript Bundles]
     
     Browser -->|JSON AJAX POST| APIEndpoints[verify_pin / toggle_attendance API]
-    APIEndpoints -->|Updates Status| DB
+    APIEndpoints -->|Check In / Check Out| DB
 ```
 
 ---
 
 ## 📁 Step-by-Step File Descriptions
 
-Here is a comprehensive breakdown of each directory and file in the codebase, explaining their purpose and functional flow.
+Here is a comprehensive breakdown of the directories and key files in the codebase.
 
 ### 1. Main Project Settings
-* **[`kindergarten_attendance/settings.py`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/kindergarten_attendance/settings.py)**
-  * Contains the core configuration settings for the Django framework.
-  * Registers installed apps (including `attendance`).
-  * Injects `attendance.views.schedule_context_processor` in `TEMPLATES` to ensure the school ticker bar (`schedule_status`) is available on all pages automatically.
-  * Configures session parameters (`SESSION_EXPIRE_AT_BROWSER_CLOSE = True`) to enforce authentication safety.
-* **[`kindergarten_attendance/urls.py`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/kindergarten_attendance/urls.py)**
-  * The root URL configuration file. Routes requests starting with `teacher/` or student check-ins to `attendance.urls`.
+* **[`employee_attendance/settings.py`](employee_attendance/settings.py)**
+  * Contains the core settings for the Django framework.
+  * Injects `attendance.views.schedule_context_processor` in `TEMPLATES` to ensure the operational shift ticker bar (`schedule_status`) is available globally.
+* **[`employee_attendance/urls.py`](employee_attendance/urls.py)**
+  * Root URL router that directs initial requests to the `attendance` app.
 
-### 2. Attendance App Models & Schema
-* **[`attendance/models.py`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/models.py)**
+### 2. Models & Schema
+* **[`attendance/models.py`](attendance/models.py)**
   * Defines the database schema:
-    * `ClassroomOption`: Stores active classrooms (e.g. Bumblebees, Butterflies) along with emojis and sorting orders.
-    * `Student`: Stores active student names, classrooms, animal badges, colors, and 4-digit PINs.
-    * `Attendance`: Records student check-ins. Implements `get_current_time_period()` to classify check-ins into Morning, Afternoon, or Evening.
-    * `AppLayoutBlock`: Contains component orders and visibility flags for visual page customizer settings.
+    * `DepartmentOption`: Stores active departments (e.g. Engineering, HR, Sales & Marketing).
+    * `Employee`: Stores active employee profiles, departments, avatar details, and secure 4-digit PINs.
+    * `Roster`: Stores shift schedule assignments (`morning`, `afternoon`, `night`) for employees on specific dates.
+    * `Attendance`: Logs check-in/out times, status (Present, Late), work modes (Office 🏢, Remote 🏠, Field 🚗), and calculates total hours worked.
+    * `EmployeeSupportPermission`: Controls which users can raise support tickets.
 
-### 3. Application Logic & Routing
-* **[`attendance/urls.py`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/urls.py)**
-  * Maps URL paths to specific python functions in `views.py`.
-* **[`attendance/views.py`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/views.py)**
-  * Handles the application logic:
-    * `home`: Renders the portal landing dashboard.
-    * `student_grid`: Collects students for the selected classroom and renders them based on `AppLayoutBlock` configurations.
-    * `toggle_attendance`: Handles checking student in or deleting records (toggle off) via JSON POST request. Also automatically tags late check-ins if processed after 9:30 AM.
-    * `teacher_dashboard`: Gathers classroom aggregates, metrics, and presents grid/table views.
-    * `ai_chat_command` & `save_layout`: Backs the developer customizer page builder, parsing natural language commands offline or via Gemini API.
-* **[`attendance/tests.py`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/tests.py)**
-  * The automated testing script containing 17 unit tests verifying models validation, authentication middleware, APIs, and AI fallback matching.
+### 3. Logic & Routing
+* **[`attendance/urls.py`](attendance/urls.py)**
+  * Maps URLs to views, handling backwards-compatible route names for integrity.
+* **[`attendance/views.py`](attendance/views.py)**
+  * Core backend logic:
+    * `employee_grid`: Renders the Employee Time & Expense kiosk station.
+    * `toggle_attendance`: Manages checking in (records work mode, checks for late check-in) and checking out (computes hours worked).
+    * `manager_dashboard`: Aggregates workforce metrics, parses roster date parameters, and serves the employee roster and interactive scheduling table.
+    * `assign_roster_shift`: Endpoint to create, update, or delete roster assignments for any date.
+    * `ai_chat_command`: Backs the developer customizer page builder, parsing natural language commands to re-order page layout blocks.
+* **[`attendance/tests.py`](attendance/tests.py)**
+  * Unified test suite containing 27 unit tests validating PIN logic, manager dashboard redirects, layout APIs, and ServiceNow integrations.
 
 ### 4. HTML Templates
-* **[`attendance/templates/attendance/base.html`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/templates/attendance/base.html)**
-  * The main structural container. Hosts the **fixed scrolling marquee announcement ticker** and the **playful unified navigation header**.
-* **[`attendance/templates/attendance/home.html`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/templates/attendance/home.html)**
-  * Dashboard landing page offering choice navigation cards to redirect users to "Kids Area" or "Teacher Portal".
-* **[`attendance/templates/attendance/student_grid.html`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/templates/attendance/student_grid.html)**
-  * Kids check-in grid displaying active animal cards, and keypad and mood overlays.
-* **[`attendance/templates/attendance/teacher_dashboard.html`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/templates/attendance/teacher_dashboard.html)**
-  * Admin dashboard with real-time stats, grid/list view switcher, and quick-action check-ins.
-* **[`attendance/templates/attendance/login.html`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/templates/attendance/login.html)**
-  * Authentication card featuring tab slides for Student pin selection and Teacher login.
-* **[`attendance/templates/attendance/developer_page.html`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/templates/attendance/developer_page.html)**
-  * The visual page builder and Gemini chatbot customization console.
+* **[`attendance/templates/attendance/base.html`](attendance/templates/attendance/base.html)**
+  * Main layout containing the global active shift announcement ticker and navigation bar.
+* **[`attendance/templates/attendance/student_grid.html`](attendance/templates/attendance/student_grid.html)**
+  * The **Employee Time & Expense** check-in kiosk page.
+* **[`attendance/templates/attendance/teacher_dashboard.html`](attendance/templates/attendance/teacher_dashboard.html)**
+  * The Manager Dashboard with quick stats, an interactive Shift Roster Scheduler table (for date-specific create, update, and delete actions), and override controls.
 
 ### 5. Static Assets
-* **[`static/css/kid_theme.css`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/static/css/kid_theme.css)**
-  * Contains the styling guidelines. Implements floating cloud keyframes, bouncy hover cards, and scrolling text marquees.
-* **[`static/js/kid_attendance.js`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/static/js/kid_attendance.js)**
-  * Implements dynamic frontend components, HTML5 drag-and-drop lists, and Starburst particles physics canvas for checking in.
-
-
----
-
-## 🛠️ Tech Support & IT Tech Services Portal
-
-The application includes a dual-themed IT support and incident tracking system:
-
-### 1. Client-Facing Support Desk (Kindergarten Theme)
-- **Roster & Sidebar Integration**: Teachers logged in with the necessary permission will see a green **"🛠️ Tech Support"** button in their portal header next to the purple Developer Area button. Additionally, their main dashboard layout will show a side panel listing all active support ticket numbers and their statuses.
-- **Support Home**: Accessible at `/support/` (wrapped in permission check). It provides a kid-themed interface for submitting new support tickets (with subject, description, priority) and tracking status. The bottom of the page displays a grid list of all logged incident tickets in the FocusFlow theme.
-- **Incident Details**: Accessible at `/support/ticket/<ticket_number>/`. Shows the caller name, assignment details, and public message thread (Internal Work Notes are strictly hidden here).
-
-### 2. IT Tech Services Portal (ServiceNow theme)
-- **Dedicated Login**: Support engineers must log in using their email and password at `/support/engineer/login/`.
-- **Workload Dashboard**: Located at `/support/engineer/` (wrapped in engineer authentication). Mimics a ServiceNow console with dark-slate grids showing metrics (active, breached, unassigned SLAs) and an engineer workload checklist.
-- **Incident Management**: Support engineers can edit ticket details, assign tickets to other engineers, transition ticket states (New, In Progress, On Hold, Resolved, Closed), and post either public **Customer Comments** or internal-only **Work Notes** (highlighted in gold with a padlock).
-- **Service Level Agreements (SLAs)**: Automatic SLA timers run depending on the incident priority:
-  - Critical: 1 hour
-  - High: 4 hours
-  - Moderate: 8 hours
-  - Low: 24 hours
-- **Administrative Permission Toggle**: Administrators (staff/superusers) can control which teachers have permission to access the support portals by toggling the `TeacherSupportPermission` in the **Developer Area**.
-- **Identity & Access Manager**: Located at `/support/engineer/identity/` (wrapped in engineer login protection), this ServiceNow-themed page serves as a unified manager for permission mapping:
-  - **Teacher & Staff Permissions**: Allows toggling ticket-raising permissions (`TeacherSupportPermission`) and promoting/demoting Django `is_staff` role for any user.
-  - **Support Engineer Groups Mapping**: Provides checkbox checklist mapping for engineers to easily associate them with multiple assignment groups (L2, L3, L4, etc.).
-
-### 3. Universal Light/Dark Theme Toggle
-- **Toggle Control**: Located at the end of the main navigation navbar, represented by dynamic emojis (`🌙` for light theme, `☀️` for dark theme).
-- **Client-Side Persistence**: Stores preference in the browser's `localStorage` and injects theme classes pre-render to eliminate any visual flickering.
-- **Dark Mode Styling**: Overrides backgrounds (`#0f172a`), card containers (`#1e293b`), tables, and form fields. Strips icon/avatar background wrappers to keep clean isolated emojis. Corrects message/error alert containers to be highly readable on dark backgrounds (light red text on dark red background for errors, light green text on dark green background for success).
+* **[`static/css/employee_theme.css`](static/css/employee_theme.css)**
+  * Standardized premium stylesheets: glassmorphism, steel-blue color variables, clean border designs, and dark/light modes.
+* **[`static/js/employee_attendance.js`](static/js/employee_attendance.js)**
+  * Manages AJAX kiosk verification flow, keypad entries, and modal transitions.
 
 ---
 
-## 🛠️ How to Update and Make Code Changes
+## 🛠️ IT Tech Services Portal (ServiceNow Theme)
 
-Here is a step-by-step guide on how to update common features within the application.
-
-### A. Adjusting School Hours & Breaks
-1. Open [`attendance/views.py`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/views.py).
-2. Locate the function `get_school_schedule_status()`.
-3. Update the `datetime.time` arguments. For example, to change school start time to `9:00 AM`:
-   ```python
-   start_time = datetime.time(9, 0)
-   ```
-4. Update the text strings and `milestones` dictionary in that same function to align the ticker labels.
-
-### B. Adding a New Component Block to the Student Grid
-1. Open [`attendance/views.py`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/views.py).
-2. Locate the `get_or_seed_layout_blocks()` function.
-3. Append a new block specification tuple to `default_blocks`, for example:
-   ```python
-   ('announcement_board', 'Classroom Announcement Board', 5)
-   ```
-4. Open [`attendance/templates/attendance/student_grid.html`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/templates/attendance/student_grid.html).
-5. Add a corresponding template logic block:
-   ```html
-   {% elif block.block_id == 'announcement_board' %}
-   <!-- Custom markup for your board here -->
-   {% endif %}
-   ```
-
-### C. Modifying Custom Colors or Fonts
-1. Open [`static/css/kid_theme.css`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/static/css/kid_theme.css).
-2. Go to the `:root` selector at the top of the file to modify variables (e.g. `--kids-blue`, `--kids-pink`, or `--sky-blue`).
-3. To alter typography, replace the Google Fonts link in [`base.html`](file:///Users/hariprasathm/VirtualBox%20VMs/KindergartenApp/attendance/templates/attendance/base.html) and update `font-family` references in the CSS file.
+An integrated, ServiceNow-themed IT service portal is available for staff:
+* **Ticket Submission**: Users can submit help desk tickets and look up statuses under `/support/`.
+* **Tech Services Console**: Located at `/support/engineer/` for authorized support engineers. Allows ticket lifecycle tracking (New, In Progress, On Hold, Resolved, Closed), SLA timer auditing, and internal-only **Work Notes** logging.
+* **Identity Manager**: Located at `/support/engineer/identity/`, allows engineers to toggle ticket permissions and engineer assignments.
+* **Logout Page**: A dedicated logout confirmation screen at `/support/engineer/logout/` terminates the active engineer session and provides action controls to log back in or return to the main portals.
 
 ---
 
 ## ⚙️ Running Seeding and Tests
 
-To restore the application to its default seeded state and run tests, use the following terminal commands:
+To seed the database with configurations and mock data (creating default employees with roster schedules and logged hours), run:
 
-1. **Seed default data (creates 12 students, active classrooms, and the admin user):**
+1. **Seed default configurations (departments, avatar emojis, colors):**
+   ```bash
+   venv/bin/python manage.py seed_configurations
+   ```
+2. **Seed employee rosters and check-in logs:**
    ```bash
    venv/bin/python seed_data.py
    ```
-2. **Execute tests:**
+3. **Execute the automated test suite:**
    ```bash
    venv/bin/python manage.py test
    ```
-
----
-
-## 🚀 Docker Deployment on AWS EC2 (Step-by-Step)
-
-Follow these instructions to deploy this application in a Docker container on a fresh AWS EC2 instance:
-
-### Step 1: Launch your EC2 Instance
-1. Log in to your **AWS Console** and navigate to the **EC2 Dashboard**.
-2. Click **Launch Instance**.
-3. Select **Ubuntu Server 22.04 LTS** (or 24.04 LTS) as the Machine Image (AMI).
-4. Choose an instance type (e.g. `t2.micro` or `t3.micro` which are Free Tier eligible).
-5. Generate or choose an SSH Key Pair (`.pem`) for connection.
-6. Under **Security Groups / Network Settings**:
-   * Allow **SSH (port 22)** from your IP address.
-   * Allow **HTTP (port 80)** from anywhere (`0.0.0.0/0`).
-7. Click **Launch Instance**.
-
-### Step 2: Connect to your EC2 Instance
-Open your local terminal and connect via SSH using your key pair:
-```bash
-ssh -i /path/to/your-key.pem ubuntu@<your-ec2-public-ip>
-```
-
-### Step 3: Install Docker & Docker Compose
-Run the following commands on your EC2 terminal:
-```bash
-# Update Ubuntu package index
-sudo apt-get update && sudo apt-get upgrade -y
-
-# Install Docker
-sudo apt-get install -y docker.io
-
-# Start and enable Docker service
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Allow running docker command without sudo (optional)
-sudo usermod -aG docker ubuntu
-
-# Install Docker Compose
-sudo apt-get install -y docker-compose
-```
-*Note: Disconnect from SSH and log back in to apply the group membership updates.*
-
-### Step 4: Clone Repository & Deploy Application
-1. Clone the repository to the EC2 server:
-   ```bash
-   git clone https://github.com/leoxurDev/AttendenceApplication.git
-   cd AttendenceApplication
-   ```
-2. Initialize and seed mock data in the SQLite database file:
-   ```bash
-   docker-compose run --rm web python seed_data.py
-   ```
-3. Run the container in the background (daemon mode):
-   ```bash
-   docker-compose up --build -d
-   ```
-
-### Step 5: Access the Web Application
-Open your web browser and enter the public IP of your EC2 instance:
-```
-http://<your-ec2-public-ip>/
-```
-Your FocusFlow Kindergarten app is now live and containerized!
-
----
-
-## 📸 Architecture Diagram & UI Layout Reference
-
-The following image represents the visual layout hierarchy and block structure of our student check-in portal:
-
-![Architecture Layout Diagram](https://github.com/leoxurDev/AttendenceApplication/blob/main/static/images/architecture.png)
-

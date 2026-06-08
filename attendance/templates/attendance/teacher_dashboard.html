@@ -1,345 +1,401 @@
 {% extends 'attendance/base.html' %}
 {% load static %}
 
-{% block title %}Teacher Admin Portal | Kindergarten Attendance{% endblock %}
+{% block title %}Manager Dashboard | ShiftHub Pro{% endblock %}
 
 {% block content %}
 
-<div class="teacher-dashboard-container">
-    <!-- Nav Header -->
-    <div class="grid-header">
-        <div class="school-logo-bubble admin-logo">
-            <span class="logo-emoji">🔑</span>
-            <h1>Teacher Portal</h1>
-            <p>Classroom Management & Registers 📝</p>
-        </div>
-        
-        <div class="admin-nav-buttons">
-            <a href="{% url 'admin_developer_page' %}" class="bubbly-btn secondary-btn dev-btn" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-color: #8b5cf6; box-shadow: 0 6px 0 #5b21b6;">
-                🛠️ Developer Area
-            </a>
-            {% if can_raise_support %}
-            <a href="{% url 'support_home' %}" class="bubbly-btn secondary-btn support-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981; box-shadow: 0 6px 0 #047857;">
-                🛠️ Tech Support
-            </a>
-            {% endif %}
-            <a href="{% url 'student_grid' %}" class="bubbly-btn primary-btn" style="background: var(--primary-gradient)">
-                🏠 Kids Grid Screen
-            </a>
-            <a href="{% url 'add_student' %}" class="bubbly-btn secondary-btn add-btn">
-                ➕ Add Student
-            </a>
-            <a href="{% url 'export_student_csv' %}?classroom={{ selected_classroom }}" class="bubbly-btn export-btn">
-                📥 Export CSV
-            </a>
-            <a href="{% url 'teacher_logout' %}" class="bubbly-btn cancel-btn logout-btn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-color: #ef4444; box-shadow: 0 6px 0 #b91c1c;">
-                🚪 Log Out
-            </a>
-        </div>
+<!-- Header Branding -->
+<div class="grid-header" style="margin-bottom: 1.5rem;">
+    <div>
+        <h1 style="font-size: 2rem; font-weight: 800;">Workforce Manager Dashboard</h1>
+        <p style="color: var(--text-muted); font-weight: 500;">Monitor employee attendance, shifts, and active rosters 📊</p>
     </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <a href="{% url 'export_student_csv' %}?classroom={{ selected_classroom }}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+            📥 Export CSV Logs
+        </a>
+        {% if request.user.is_staff or request.user.is_superuser %}
+        <a href="{% url 'admin_developer_page' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem; border-color: var(--primary-color); color: var(--primary-color);">
+            🛠️ Customizer
+        </a>
+        {% endif %}
+        <a href="{% url 'add_student' %}" class="bubbly-btn primary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+            ➕ Add Employee
+        </a>
+    </div>
+</div>
 
-    <!-- Django Success/Error Messages -->
-    {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="message-alert {{ message.tags }}">
-                    {{ message }}
-                </div>
+<!-- Department Filters and Views Toggles -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <!-- Department Selector Dropdown -->
+    <form method="GET" style="display: flex; align-items: center; gap: 0.5rem;">
+        <label for="dept-filter" style="font-weight: 700; font-size: 0.9rem; color: var(--text-muted);">Department:</label>
+        <select id="dept-filter" name="classroom" onchange="this.form.submit()" class="form-select" style="width: auto; padding: 0.5rem 2.25rem 0.5rem 1rem;">
+            {% for dept_value, dept_label in classrooms %}
+            <option value="{{ dept_value }}" {% if dept_value == selected_classroom %}selected{% endif %}>
+                {{ dept_label }}
+            </option>
             {% endfor %}
-        </div>
-    {% endif %}
+        </select>
+    </form>
 
-    <!-- Classroom Filter selector & Stats -->
-    <div class="teacher-control-bar">
-        <form method="GET" class="filter-form">
-            <label for="class-filter">Classroom Filter:</label>
-            <select name="classroom" id="class-filter" class="form-select inline-select" onchange="this.form.submit()">
-                {% for code, label in classrooms %}
-                    <option value="{{ code }}" {% if code == selected_classroom %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
+    <!-- View Modes switcher -->
+    <div style="display: flex; background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 0.25rem; border-radius: var(--radius-sm);">
+        <button id="view-grid-btn" class="bubbly-btn active" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: none;">
+            🎴 Cards View
+        </button>
+        <button id="view-list-btn" class="bubbly-btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--text-muted);">
+            📋 Roster List
+        </button>
+    </div>
+</div>
+
+<!-- Metrics Summary Cards -->
+<div class="mini-stats-grid">
+    <div class="mini-stat-card present">
+        <div class="label">Checked In</div>
+        <div class="value">{{ present_count }}</div>
+    </div>
+    <div class="mini-stat-card late">
+        <div class="label">Late Arrivals</div>
+        <div class="value">{{ late_count }}</div>
+    </div>
+    <div class="mini-stat-card absent">
+        <div class="label">Absent / Off Shift</div>
+        <div class="value">{{ absent_count }}</div>
+    </div>
+    <div class="mini-stat-card rate">
+        <div class="label">Attendance Rate</div>
+        <div class="value">{{ attendance_percentage }}%</div>
+    </div>
+</div>
+
+<!-- Interactive Shift Roster Planner -->
+<div class="roster-editor-section" style="background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm); margin-bottom: 2.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <div>
+            <h3 class="roster-editor-title" style="margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 800;">
+                📅 Shift Roster Scheduler
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                Schedule shift roster assignments for your team by date. Create, update, or remove rosters.
+            </p>
+        </div>
+        <!-- Date Selection Form -->
+        <form method="GET" style="display: flex; align-items: center; gap: 0.5rem;">
+            <!-- Preserve department filter if any -->
+            {% if selected_classroom != 'All' %}
+            <input type="hidden" name="classroom" value="{{ selected_classroom }}">
+            {% endif %}
+            <label for="roster-datepicker" style="font-weight: 700; font-size: 0.9rem; color: var(--text-muted);">Select Roster Date:</label>
+            <input type="date" id="roster-datepicker" name="roster_date" class="form-input" value="{{ roster_date_str }}" onchange="this.form.submit()" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
         </form>
-        
-        <div class="stats-pills-row">
-            <div class="mini-stat-card present">
-                <span class="value">{{ present_count }}</span>
-                <span class="label">Present</span>
-            </div>
-            <div class="mini-stat-card late">
-                <span class="value">{{ late_count }}</span>
-                <span class="label">Late</span>
-            </div>
-            <div class="mini-stat-card absent">
-                <span class="value">{{ absent_count }}</span>
-                <span class="label">Absent</span>
-            </div>
-            <div class="mini-stat-card rate">
-                <span class="value">{{ attendance_percentage }}%</span>
-                <span class="label">Attendance</span>
-            </div>
-        </div>
     </div>
 
-    {% if can_raise_support %}
-    <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; width: 100%;">
-        <div style="flex: 3; min-width: 320px;">
-    {% endif %}
-
-    <!-- Layout Toggle Pill Tab -->
-    <div class="dashboard-view-switcher" style="display: flex; gap: 0.35rem; background: #e2e8f0; padding: 0.35rem; border-radius: 20px; width: fit-content; margin-bottom: 2rem; border: 2px solid #cbd5e1; position: relative;">
-        <button class="view-switch-btn active" id="view-grid-btn" style="border: none; background: #ffffff; padding: 0.6rem 1.25rem; border-radius: 16px; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem; color: #1e3a8a; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            🗂️ Grid Roster
-        </button>
-        <button class="view-switch-btn" id="view-list-btn" style="border: none; background: transparent; padding: 0.6rem 1.25rem; border-radius: 16px; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem; color: #475569; cursor: pointer; transition: all 0.3s;">
-            📋 Table List
-        </button>
-    </div>
-
-    <!-- VIEW 1: MODERN GRID VIEW -->
-    <div class="dashboard-grid-view" id="roster-grid-view" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-        {% for student in students %}
-            <div class="teacher-student-card" data-student-id="{{ student.id }}" style="background: #ffffff; border: 3px solid {{ student.avatar_color }}; border-radius: 28px; padding: 1.5rem; box-shadow: var(--card-shadow); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;">
-                
-                <!-- Card Header -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <div class="table-avatar" style="background-color: {{ student.avatar_color }}; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; border: 3px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                            {{ student.avatar_emoji }}
-                        </div>
-                        <div>
-                            <h3 style="font-family: 'Fredoka', sans-serif; color: #1e3a8a; margin: 0; font-size: 1.15rem;">{{ student.full_name }}</h3>
-                            <span class="table-classroom-badge" style="margin-top: 0.2rem; display: inline-block;">{{ student.classroom }}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Action Menu -->
-                    <div style="display: flex; gap: 0.35rem;">
-                        <a href="{% url 'edit_student' student.id %}" class="action-btn edit" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; background: #ffffff; text-decoration: none;" title="Edit Student">✏️</a>
-                        <a href="{% url 'delete_student' student.id %}" class="action-btn delete" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; background: #ffffff; text-decoration: none;" title="Delete Student">🗑️</a>
-                    </div>
-                </div>
-                
-                <!-- Card Middle: PIN and Status information -->
-                <div style="margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                    <!-- PIN Toggle -->
-                    <div class="pin-privacy-toggle" style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 2px solid #f1f5f9; border-radius: 14px; padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.95rem; font-weight: 700; color: #475569;">
-                        <span style="font-family: 'Fredoka', sans-serif; font-size: 0.85rem; color: #94a3b8; font-weight: 700;">PIN CODE:</span>
-                        <div style="display: flex; align-items: center; gap: 0.4rem;">
-                            <span class="pin-digits-hidden">••••</span>
-                            <span class="pin-digits-shown" style="display: none; background: #f1f5f9; padding: 0.1rem 0.4rem; border-radius: 6px; color: #1e3a8a;">{{ student.pin_code }}</span>
-                            <button class="pin-toggle-btn" style="border: none; background: transparent; cursor: pointer; font-size: 1.1rem; padding: 0;" title="Show/Hide PIN">👁️</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Today Check-in status display -->
-                    <div style="background: #f8fafc; border: 2px solid #f1f5f9; border-radius: 14px; padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8; font-weight: 700;">Check-in:</span>
-                            <strong class="checked-time-cell" style="color: #475569;">
-                                {% if student.today_status and student.today_status.status != 'absent' %}
-                                    {{ student.today_status.checked_in_at|date:"g:i A" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #94a3b8; font-weight: 700;">Mood:</span>
-                            <strong class="mood-cell" style="color: #475569;">
-                                {% if student.today_status and student.today_status.mood %}
-                                    {{ student.today_status.get_mood_display }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </strong>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Card Footer: Status controls -->
-                <div class="attendance-action-pills" style="display: flex; width: 100%; gap: 0.35rem;">
-                    <button class="status-action-btn present-btn {% if student.today_status and student.today_status.status == 'present' %}active{% endif %}" 
-                            data-status="present" data-student="{{ student.id }}" style="flex: 1; padding: 0.5rem 0.2rem; font-size: 0.8rem; font-weight: 700;">
-                        Present ☀️
-                    </button>
-                    <button class="status-action-btn late-btn {% if student.today_status and student.today_status.status == 'late' %}active{% endif %}" 
-                            data-status="late" data-student="{{ student.id }}" style="flex: 1; padding: 0.5rem 0.2rem; font-size: 0.8rem; font-weight: 700;">
-                        Late ⏰
-                    </button>
-                    <button class="status-action-btn absent-btn {% if not student.today_status or student.today_status.status == 'absent' %}active{% endif %}" 
-                            data-status="absent" data-student="{{ student.id }}" style="flex: 1; padding: 0.5rem 0.2rem; font-size: 0.8rem; font-weight: 700;">
-                        Absent 🌙
-                    </button>
-                </div>
-                
-            </div>
-        {% empty %}
-            <div style="grid-column: 1/-1; text-align: center; padding: 3rem; background: #ffffff; border: 3px dashed #cbd5e1; border-radius: 28px;">
-                <h3 style="font-family: 'Fredoka', sans-serif; color: #1e3a8a;">No Students Found 🐣</h3>
-                <p style="font-weight: 600; color: #94a3b8;">Click "Add Student" above to populate the school roster.</p>
-            </div>
-        {% endfor %}
-    </div>
-
-    <!-- VIEW 2: STANDARD LIST TABLE VIEW -->
-    <div class="table-card" id="roster-list-view" style="display: none; transition: all 0.3s ease;">
-        <table class="kids-admin-table">
+    <!-- Table structure for roster management -->
+    <div class="roster-table-container" style="margin-bottom: 0; max-height: 450px; overflow-y: auto;">
+        <table class="roster-table">
             <thead>
                 <tr>
-                    <th>Avatar</th>
-                    <th>Full Name</th>
-                    <th>Classroom</th>
-                    <th>PIN</th>
-                    <th>Today's Attendance Status</th>
-                    <th>Checked In At</th>
-                    <th>
-                        {% if current_time_period == 'morning' %}
-                            Morning Mood
-                        {% elif current_time_period == 'afternoon' %}
-                            Afternoon Mood
-                        {% else %}
-                            Evening Mood
-                        {% endif %}
-                    </th>
-                    <th>Actions</th>
+                    <th>Employee Name</th>
+                    <th>Department</th>
+                    <th>Rostered Shift ({{ roster_date_str }})</th>
+                    <th>Assign / Update Shift</th>
+                    <th>Remove Assignment</th>
                 </tr>
             </thead>
             <tbody>
-                {% for student in students %}
-                    <tr data-student-id="{{ student.id }}">
-                        <td>
-                            <div class="table-avatar" style="background-color: {{ student.avatar_color }}">
-                                {{ student.avatar_emoji }}
+                {% for employee in students %}
+                <tr>
+                    <td>
+                        <div class="employee-row-info">
+                            <div class="employee-row-avatar" style="--avatar-color: {{ employee.avatar_color }}">
+                                {{ employee.avatar_emoji }}
                             </div>
-                        </td>
-                        <td>
-                            <strong class="student-table-name">{{ student.full_name }}</strong>
-                        </td>
-                        <td>
-                            <span class="table-classroom-badge">{{ student.classroom }}</span>
-                        </td>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                <span class="pin-digits-hidden">••••</span>
-                                <span class="pin-digits-shown" style="display: none;">{{ student.pin_code }}</span>
-                                <button class="pin-toggle-btn" style="border: none; background: transparent; cursor: pointer; font-size: 1rem; padding: 0;">👁️</button>
+                            <div>
+                                <div class="employee-row-name">{{ employee.full_name }}</div>
                             </div>
-                        </td>
-                        <td>
-                            <!-- Teacher Quick Attendance Actions -->
-                            <div class="attendance-action-pills">
-                                <button class="status-action-btn present-btn {% if student.today_status and student.today_status.status == 'present' %}active{% endif %}" 
-                                        data-status="present" data-student="{{ student.id }}">
-                                    Present ☀️
-                                </button>
-                                <button class="status-action-btn late-btn {% if student.today_status and student.today_status.status == 'late' %}active{% endif %}" 
-                                        data-status="late" data-student="{{ student.id }}">
-                                    Late ⏰
-                                </button>
-                                <button class="status-action-btn absent-btn {% if not student.today_status or student.today_status.status == 'absent' %}active{% endif %}" 
-                                        data-status="absent" data-student="{{ student.id }}">
-                                    Absent 🌙
-                                </button>
-                            </div>
-                        </td>
-                        <td class="checked-time-cell">
-                            {% if student.today_status and student.today_status.status != 'absent' %}
-                                {{ student.today_status.checked_in_at|date:"g:i A" }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td class="mood-cell">
-                            {% if student.today_status and student.today_status.mood %}
-                                <span class="mood-display-pill">
-                                    {{ student.today_status.get_mood_display }}
-                                </span>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="admin-row-actions">
-                                <a href="{% url 'edit_student' student.id %}" class="action-btn edit" title="Edit Student">✏️</a>
-                                <a href="{% url 'delete_student' student.id %}" class="action-btn delete" title="Delete Student">🗑️</a>
-                            </div>
-                        </td>
-                    </tr>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">
+                            {{ employee.department }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if employee.today_roster %}
+                        <span class="shift-badge badge-{{ employee.today_roster.shift }}">
+                            {{ employee.today_roster.get_shift_display }}
+                        </span>
+                        {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Off Shift</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{% url 'assign_roster_shift' %}" style="display: flex; gap: 0.5rem; align-items: center; margin: 0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="employee_id" value="{{ employee.id }}">
+                            <input type="hidden" name="date" value="{{ roster_date_str }}">
+                            <input type="hidden" name="classroom" value="{{ selected_classroom }}">
+                            <select name="shift" class="form-select" style="width: auto; padding: 0.35rem 1.75rem 0.35rem 0.75rem; font-size: 0.85rem;" required>
+                                <option value="morning" {% if employee.today_roster and employee.today_roster.shift == 'morning' %}selected{% endif %}>Morning Shift</option>
+                                <option value="afternoon" {% if employee.today_roster and employee.today_roster.shift == 'afternoon' %}selected{% endif %}>Afternoon Shift</option>
+                                <option value="night" {% if employee.today_roster and employee.today_roster.shift == 'night' %}selected{% endif %}>Night Shift</option>
+                                <option value="none" {% if not employee.today_roster %}selected{% endif %}>Off Shift (None)</option>
+                            </select>
+                            <button type="submit" class="bubbly-btn primary-btn" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+                                💾 Save
+                            </button>
+                        </form>
+                    </td>
+                    <td>
+                        {% if employee.today_roster %}
+                        <form method="POST" action="{% url 'assign_roster_shift' %}" style="display: inline; margin: 0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="employee_id" value="{{ employee.id }}">
+                            <input type="hidden" name="date" value="{{ roster_date_str }}">
+                            <input type="hidden" name="classroom" value="{{ selected_classroom }}">
+                            <input type="hidden" name="shift" value="none">
+                            <button type="submit" class="bubbly-btn secondary-btn" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; border-color: var(--danger-color); color: var(--danger-color); background-color: var(--danger-light); font-weight: 700;" onclick="return confirm('Remove shift assignment for {{ employee.full_name }}?')">
+                                🗑️ Delete
+                            </button>
+                        </form>
+                        {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
                 {% empty %}
-                    <tr>
-                        <td colspan="8" class="table-empty-state" style="text-align: center; padding: 2rem; font-weight: 700; color: #94a3b8;">
-                            No students registered. Click "Add Student" above to populate the school!
-                        </td>
-                    </tr>
+                <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem 0; font-weight: 600;">
+                        No employees registered in this department.
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+</div>
 
-    {% if can_raise_support %}
-        </div>
-        
-        <!-- Tech Support Sidebar -->
-        <div style="flex: 1.1; min-width: 300px; display: flex; flex-direction: column; gap: 1.5rem;">
-            <!-- Tech Support Services Card -->
-            <div class="kid-card present" style="border-color: #3b82f6; padding: 1.5rem; background-color: #ffffff; box-shadow: var(--card-shadow); border-radius: 28px;">
-                <h3 style="font-family: 'Fredoka', sans-serif; color: #1e3a8a; margin-top: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem;">
-                    🛠️ Support Services
-                </h3>
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.25rem; font-family: 'Quicksand', sans-serif; line-height: 1.4;">
-                    Have a technical issue? Open a ticket to get help from our IT support desk.
-                </p>
-                <a href="{% url 'support_home' %}" class="bubbly-btn primary-btn" style="display: block; text-align: center; text-decoration: none; background: var(--primary-gradient); font-size: 0.95rem; padding: 0.6rem 1.2rem; box-shadow: 0 4px 0 #2563eb;">
-                    🎫 Raise Support Ticket
-                </a>
-            </div>
+<!-- Roster views containers -->
 
-            <!-- Incidents List/Grid in Sidebar -->
-            <div class="kid-card present" style="border-color: #10b981; padding: 1.5rem; background-color: #ffffff; box-shadow: var(--card-shadow); border-radius: 28px;">
-                <h3 style="font-family: 'Fredoka', sans-serif; color: #1e3a8a; margin-top: 0; font-size: 1.2rem; margin-bottom: 1rem; border-bottom: 2px dashed #cbd5e1; padding-bottom: 0.5rem;">
-                    📋 Support Incidents
-                </h3>
-                {% if tickets_list %}
-                    <div style="display: flex; flex-direction: column; gap: 0.85rem; max-height: 400px; overflow-y: auto; padding-right: 0.25rem;">
-                        {% for ticket in tickets_list %}
-                            <div style="border: 2px solid #e2e8f0; border-radius: 16px; padding: 0.85rem; transition: transform 0.2s, border-color 0.2s; background: #f8fafc;" class="sidebar-ticket-item">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                    <a href="{% url 'support_ticket_view' ticket.number %}" style="font-family: monospace; font-size: 0.85rem; font-weight: 700; color: #3b82f6; text-decoration: none;">
-                                        {{ ticket.number }}
-                                    </a>
-                                    <span style="font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 12px; border: 1.5px solid 
-                                        {% if ticket.state == 'new' %}#3b82f6; background-color: #dbeafe; color: #2563eb;
-                                        {% elif ticket.state == 'in_progress' %}#f97316; background-color: #ffedd5; color: #ea580c;
-                                        {% elif ticket.state == 'on_hold' %}#a3a3a3; background-color: #f5f5f5; color: #737373;
-                                        {% elif ticket.state == 'resolved' %}#22c55e; background-color: #dcfce7; color: #16a34a;
-                                        {% else %}#64748b; background-color: #f1f5f9; color: #475569;{% endif %}">
-                                        {{ ticket.get_state_display }}
-                                    </span>
-                                </div>
-                                <h4 style="margin: 0 0 0.35rem 0; font-family: 'Fredoka', sans-serif; font-size: 0.95rem; color: #1e3a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    {{ ticket.subject }}
-                                </h4>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94a3b8;">
-                                    <span>Priority: <b style="color: #64748b;">{{ ticket.get_priority_display }}</b></span>
-                                    <span>{{ ticket.created_at|date:"M d" }}</span>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
+<!-- 1. Cards View -->
+<div id="roster-grid-view" class="kids-grid-container" style="display: grid;">
+    {% for employee in students %}
+    <div class="kid-card" data-student-id="{{ employee.id }}" style="--kid-color: {{ employee.avatar_color }}; cursor: default;">
+        <div class="kid-avatar-wrapper" style="width: 68px; height: 68px; font-size: 1.8rem; margin-bottom: 0.75rem;">
+            <span class="kid-emoji">{{ employee.avatar_emoji }}</span>
+            <div class="status-indicator-badge" style="width: 24px; height: 24px; font-size: 0.85rem;">
+                {% if employee.today_status %}
+                    {% if employee.today_status.checked_out_at %}✅{% else %}🟢{% endif %}
                 {% else %}
-                    <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin: 1rem 0;">
-                        No incidents logged yet. 🦋
-                    </p>
+                    ❌
                 {% endif %}
             </div>
         </div>
+
+        <h2 class="kid-name" style="font-size: 1.1rem; margin-bottom: 0.25rem;">{{ employee.full_name }}</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem; background-color: var(--bg-color); padding: 0.2rem 0.5rem; border-radius: 4px;">
+            PIN: 
+            <span class="pin-digits-hidden">••••</span>
+            <span class="pin-digits-shown" style="display: none;">{{ employee.pin_code }}</span>
+            <button class="pin-toggle-btn" style="background: none; border: none; cursor: pointer; font-size: 0.85rem; margin-left: 0.25rem;">👁️</button>
+        </p>
+
+        <p class="kid-status-text" style="font-size: 0.8rem; margin-bottom: 1rem;">
+            <strong>Dept:</strong> {{ employee.department }}<br>
+            <strong>Roster:</strong> {{ employee.today_roster.get_shift_display|default:"Off Shift" }}<br>
+            {% if employee.today_status %}
+                <strong>In:</strong> {{ employee.today_status.checked_in_at|date:"g:i A" }} 
+                {% if employee.today_status.checked_out_at %}<br><strong>Out:</strong> {{ employee.today_status.checked_out_at|date:"g:i A" }} ({{ employee.today_status.hours_worked }}h){% endif %}
+                <br><strong>Mode:</strong> {{ employee.today_status.get_work_mode_display }}
+            {% else %}
+                <strong>Logs:</strong> Absent / No check-in
+            {% endif %}
+        </p>
+
+        <!-- Attendance Status Override buttons -->
+        <div class="status-actions-cell" style="width: 100%; justify-content: center; border-top: 1px solid var(--border-color); padding-top: 0.75rem; margin-top: auto;">
+            <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'present' %}active{% endif %}" data-student="{{ employee.id }}" data-status="present">
+                Active
+            </button>
+            <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'late' %}active{% endif %}" data-student="{{ employee.id }}" data-status="late">
+                Late
+            </button>
+            <button class="status-action-btn {% if not employee.today_status or employee.today_status.status == 'absent' %}active{% endif %}" data-student="{{ employee.id }}" data-status="absent">
+                Absent
+            </button>
+        </div>
+
+        <!-- CRUD Actions -->
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+            <a href="{% url 'edit_student' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--primary-color);">✏️ Edit</a>
+            <span style="color: var(--border-color);">|</span>
+            <a href="{% url 'delete_student' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--danger-color);">🗑️ Remove</a>
+        </div>
     </div>
-    <style>
-        .sidebar-ticket-item:hover {
-            transform: translateY(-2px);
-            border-color: #3b82f6 !important;
-        }
-    </style>
+    {% endfor %}
+</div>
+
+<!-- 2. Roster List View -->
+<div id="roster-list-view" class="roster-table-container" style="display: none;">
+    <table class="roster-table">
+        <thead>
+            <tr>
+                <th>Employee Name</th>
+                <th>PIN Code</th>
+                <th>Today's Roster</th>
+                <th>Attendance State</th>
+                <th>Check-in Time</th>
+                <th>Check-out Time</th>
+                <th>Work Mode</th>
+                <th>Hours</th>
+                <th>Quick Actions Override</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in students %}
+            <tr data-student-id="{{ employee.id }}">
+                <td>
+                    <div class="employee-row-info">
+                        <div class="employee-row-avatar" style="--avatar-color: {{ employee.avatar_color }}">
+                            {{ employee.avatar_emoji }}
+                        </div>
+                        <div>
+                            <div class="employee-row-name">{{ employee.full_name }}</div>
+                            <div class="employee-row-dept">{{ employee.department }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="pin-digits-hidden">••••</span>
+                    <span class="pin-digits-shown" style="display: none;">{{ employee.pin_code }}</span>
+                    <button class="pin-toggle-btn" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; margin-left: 0.25rem;">👁️</button>
+                </td>
+                <td>
+                    {% if employee.today_roster %}
+                    <span class="shift-badge badge-{{ employee.today_roster.shift }}">
+                        {{ employee.today_roster.get_shift_display }}
+                    </span>
+                    {% else %}
+                    <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Off Shift</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if employee.today_status %}
+                        {% if employee.today_status.status == 'present' %}
+                        <span class="shift-badge badge-present">Present</span>
+                        {% else %}
+                        <span class="shift-badge badge-late">Late</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="shift-badge badge-absent">Absent</span>
+                    {% endif %}
+                </td>
+                <td class="checked-time-cell">
+                    {{ employee.today_status.checked_in_at|date:"g:i A"|default:"-" }}
+                </td>
+                <td class="checked-out-cell">
+                    {{ employee.today_status.checked_out_at|date:"g:i A"|default:"-" }}
+                </td>
+                <td class="mood-cell">
+                    {% if employee.today_status %}
+                    {{ employee.today_status.get_work_mode_display }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if employee.today_status %}
+                    <strong>{{ employee.today_status.hours_worked }} hrs</strong>
+                    {% else %}
+                    0.0
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="status-actions-cell">
+                        <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'present' %}active{% endif %}" data-student="{{ employee.id }}" data-status="present">Present</button>
+                        <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'late' %}active{% endif %}" data-student="{{ employee.id }}" data-status="late">Late</button>
+                        <button class="status-action-btn {% if not employee.today_status or employee.today_status.status == 'absent' %}active{% endif %}" data-student="{{ employee.id }}" data-status="absent">Absent</button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ServiceNow Tech Support Ticket List -->
+{% if can_raise_support %}
+<div class="support-main-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+        <h2 style="font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+            🛠️ ServiceNow IT Support Portal
+        </h2>
+        <a href="{% url 'support_home' %}" class="bubbly-btn primary-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+            🆕 Raise Support Ticket
+        </a>
+    </div>
+    
+    {% if tickets_list %}
+    <div class="roster-table-container">
+        <table class="roster-table">
+            <thead>
+                <tr>
+                    <th>Ticket Number</th>
+                    <th>Caller</th>
+                    <th>Subject</th>
+                    <th>State</th>
+                    <th>Priority</th>
+                    <th>SLA Status</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tickets_list %}
+                <tr>
+                    <td>
+                        <a href="{% url 'support_ticket_view' t.number %}" style="font-weight: 700; color: var(--primary-color); text-decoration: none;">
+                            {{ t.number }}
+                        </a>
+                    </td>
+                    <td>{{ t.caller }}</td>
+                    <td>{{ t.subject }}</td>
+                    <td>
+                        <span class="shift-badge" style="background-color: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color);">
+                            {{ t.get_state_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="shift-badge" style="font-weight: 800; 
+                            {% if t.priority == 'critical' %}background-color: var(--danger-light); color: var(--danger-color);
+                            {% elif t.priority == 'high' %}background-color: var(--warning-light); color: var(--warning-color);
+                            {% else %}background-color: var(--bg-color); color: var(--text-main);{% endif %}">
+                            {{ t.get_priority_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% with sla=t.get_sla_status %}
+                        <span class="shift-badge {{ sla.class }}">
+                            {{ sla.label }}
+                        </span>
+                        {% endwith %}
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-muted);">
+                        {{ t.created_at|date:"M d, Y g:i A" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: var(--text-muted); font-size: 0.95rem; font-weight: 600; text-align: center; padding: 2rem 0;">
+        No support requests raised recently. All systems operational. 🟢
+    </p>
     {% endif %}
 </div>
+{% endif %}
+
 {% endblock %}

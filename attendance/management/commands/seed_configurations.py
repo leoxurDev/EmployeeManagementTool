@@ -1,55 +1,55 @@
 from django.core.management.base import BaseCommand
-from attendance.models import ClassroomOption, AvatarEmoji, AvatarColor
+from attendance.models import DepartmentOption, AvatarEmoji, AvatarColor
 
 
 class Command(BaseCommand):
-    help = 'Seed initial configuration options (classrooms, avatar emojis, colors)'
+    help = 'Seed initial configuration options (departments, avatar emojis, colors)'
 
     def handle(self, *args, **options):
-        # Classroom options
-        classrooms = [
-            {'emoji': '🐝', 'name': 'Bumblebees', 'description': 'Pre-KG', 'order': 0},
-            {'emoji': '🦋', 'name': 'Butterflies', 'description': 'LKG', 'order': 1},
-            {'emoji': '🐞', 'name': 'Ladybugs', 'description': 'UKG', 'order': 2},
-            {'emoji': '🪰', 'name': 'Dragonflies', 'description': '1st Grade', 'order': 3},
-            {'emoji': '🍯', 'name': 'Honeybees', 'description': '2nd Grade', 'order': 4},
-            {'emoji': '✨', 'name': 'Fireflies', 'description': '3rd Grade', 'order': 5},
-            {'emoji': '🦗', 'name': 'Grasshoppers', 'description': '4th Grade', 'order': 6},
-            {'emoji': '🐛', 'name': 'Caterpillars', 'description': '5th Grade', 'order': 7},
+        # Department options
+        departments = [
+            {'emoji': '💻', 'name': 'Engineering', 'description': 'Software Development & IT', 'order': 0},
+            {'emoji': '📈', 'name': 'Sales & Marketing', 'description': 'Customer Acquisition & Growth', 'order': 1},
+            {'emoji': '🤝', 'name': 'Human Resources', 'description': 'People Operations & Talent', 'order': 2},
+            {'emoji': '📞', 'name': 'Customer Success', 'description': 'Support & Client Relations', 'order': 3},
+            {'emoji': '🚚', 'name': 'Operations', 'description': 'Logistics & Supply Chain', 'order': 4},
+            {'emoji': '💰', 'name': 'Finance', 'description': 'Accounting & Treasury', 'order': 5},
+            {'emoji': '🎨', 'name': 'Design', 'description': 'Product & Creative UI/UX', 'order': 6},
+            {'emoji': '💡', 'name': 'Research & Dev', 'description': 'Innovation & New Products', 'order': 7},
         ]
         
-        for classroom in classrooms:
-            obj, created = ClassroomOption.objects.get_or_create(
-                name=classroom['name'],
+        for dept in departments:
+            obj, created = DepartmentOption.objects.get_or_create(
+                name=dept['name'],
                 defaults={
-                    'emoji': classroom['emoji'],
-                    'description': classroom['description'],
-                    'order': classroom['order']
+                    'emoji': dept['emoji'],
+                    'description': dept['description'],
+                    'order': dept['order']
                 }
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f"Created classroom: {obj}"))
+                self.stdout.write(self.style.SUCCESS(f"Created department: {obj}"))
             else:
-                self.stdout.write(f"Classroom already exists: {obj}")
+                self.stdout.write(f"Department already exists: {obj}")
         
-        # Avatar emojis
+        # Avatar emojis (Professional and office theme)
         emojis = [
-            {'emoji': '🦁', 'name': 'Lion', 'order': 0},
-            {'emoji': '🐯', 'name': 'Tiger', 'order': 1},
-            {'emoji': '🐘', 'name': 'Elephant', 'order': 2},
-            {'emoji': '🐼', 'name': 'Panda', 'order': 3},
-            {'emoji': '🦊', 'name': 'Fox', 'order': 4},
-            {'emoji': '🐨', 'name': 'Koala', 'order': 5},
-            {'emoji': '🦖', 'name': 'Dino', 'order': 6},
-            {'emoji': '🦄', 'name': 'Unicorn', 'order': 7},
-            {'emoji': '🐰', 'name': 'Bunny', 'order': 8},
-            {'emoji': '🐸', 'name': 'Frog', 'order': 9},
-            {'emoji': '🦉', 'name': 'Owl', 'order': 10},
-            {'emoji': '🐝', 'name': 'Bee', 'order': 11},
-            {'emoji': '🦋', 'name': 'Butterfly', 'order': 12},
-            {'emoji': '🐳', 'name': 'Whale', 'order': 13},
-            {'emoji': '🦀', 'name': 'Crab', 'order': 14},
-            {'emoji': '🐬', 'name': 'Dolphin', 'order': 15},
+            {'emoji': '💼', 'name': 'Briefcase', 'order': 0},
+            {'emoji': '💻', 'name': 'Laptop', 'order': 1},
+            {'emoji': '📊', 'name': 'Bar Chart', 'order': 2},
+            {'emoji': '📈', 'name': 'Line Chart', 'order': 3},
+            {'emoji': '🎨', 'name': 'Palette', 'order': 4},
+            {'emoji': '🛠️', 'name': 'Hammer & Wrench', 'order': 5},
+            {'emoji': '🚀', 'name': 'Rocket', 'order': 6},
+            {'emoji': '💡', 'name': 'Light Bulb', 'order': 7},
+            {'emoji': '🔑', 'name': 'Key', 'order': 8},
+            {'emoji': '📣', 'name': 'Megaphone', 'order': 9},
+            {'emoji': '📦', 'name': 'Package', 'order': 10},
+            {'emoji': '🩺', 'name': 'Stethoscope', 'order': 11},
+            {'emoji': '⚖️', 'name': 'Scales', 'order': 12},
+            {'emoji': '🛡️', 'name': 'Shield', 'order': 13},
+            {'emoji': '☕', 'name': 'Coffee', 'order': 14},
+            {'emoji': '🎯', 'name': 'Bullseye', 'order': 15},
         ]
         
         for emoji in emojis:

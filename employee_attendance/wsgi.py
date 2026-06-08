@@ -1,5 +1,5 @@
 """
-WSGI config for kindergarten_attendance project.
+WSGI config for employee_attendance project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'kindergarten_attendance.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'employee_attendance.settings')
 
 application = get_wsgi_application()

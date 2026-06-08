@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IT Tech Services Login | Leoxur Inc.</title>
+    <title>IT Tech Services Logout | Leoxur Inc.</title>
     <!-- ServiceNow Theme CSS -->
     <link rel="stylesheet" href="{% static 'css/servicenow_theme.css' %}">
     <style>
@@ -48,6 +48,7 @@
         }
         .login-body {
             padding: 2.25rem 2rem;
+            text-align: center;
         }
         .login-footer {
             padding: 1.25rem 2rem;
@@ -71,44 +72,26 @@
 
     <div class="login-card">
         <div class="login-header">
-            <h2><span>💻</span> IT Tech Services</h2>
-            <p>Leoxur Inc. Staff Portal</p>
+            <h2><span>🚪</span> Logged Out</h2>
+            <p>IT Tech Services Portal</p>
         </div>
 
         <div class="login-body">
-            <!-- Django Alert Messages -->
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="snow-alert {% if message.tags == 'success' %}snow-alert-success{% else %}snow-alert-error{% endif %}" style="margin-bottom: 1.25rem;">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
+            <div class="snow-alert snow-alert-success" style="margin-bottom: 1.5rem; background-color: #ecfdf5; border-color: #10b981; color: #047857; padding: 0.75rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">
+                You have successfully logged out of your session.
+            </div>
+            
+            <p style="color: #475569; font-size: 0.95rem; margin-bottom: 1.5rem; font-weight: 500; line-height: 1.4;">
+                Thank you for keeping our systems running smoothly!
+            </p>
 
-            <form method="POST">
-                {% csrf_token %}
-                <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-                    <div class="snow-form-group">
-                        <label for="email" style="font-weight: 600; color: #475569;">Email Address</label>
-                        <input type="email" name="email" id="email" class="snow-form-control" placeholder="name@company.com" required
-                               style="width: 100%; box-sizing: border-box; height: 40px; font-size: 0.95rem;">
-                    </div>
-
-                    <div class="snow-form-group">
-                        <label for="password" style="font-weight: 600; color: #475569;">Password</label>
-                        <input type="password" name="password" id="password" class="snow-form-control" placeholder="••••••••" required
-                               style="width: 100%; box-sizing: border-box; height: 40px; font-size: 0.95rem;">
-                    </div>
-
-                    <button type="submit" class="snow-btn snow-btn-primary" style="width: 100%; height: 42px; font-size: 1rem; font-weight: bold; margin-top: 0.5rem; background-color: #2b3a3b; border-color: #2b3a3b;">
-                        Log In to Portal
-                    </button>
-                </div>
-            </form>
+            <a href="{% url 'engineer_login' %}" class="snow-btn snow-btn-primary" style="display: block; width: 100%; box-sizing: border-box; text-decoration: none; text-align: center; line-height: 42px; height: 42px; font-size: 1rem; font-weight: bold; background-color: #2b3a3b; border-color: #2b3a3b; color: white; border-radius: 4px;">
+                Log Back In
+            </a>
         </div>
 
         <div class="login-footer">
-            Not staff? <a href="{% url 'home' %}">Exit to Portal Home</a>
+            <a href="{% url 'home' %}">Exit to Portal Home</a>
         </div>
     </div>
 

@@ -1,41 +1,33 @@
 {% extends 'attendance/base.html' %}
 {% load static %}
 
-{% block title %}Welcome | Kindergarten Attendance{% endblock %}
+{% block title %}Welcome | Leoxur Solutions Limited{% endblock %}
 
 {% block content %}
-<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 2rem;">
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 2rem; padding: 2rem 0;">
     <div class="school-logo-bubble">
-        <span class="logo-emoji">🏫</span>
-        <h1>Welcome to Kindergarten App</h1>
-        <p>Where do you want to go today?</p>
+        <h1 style="font-size: 2.5rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 0.5rem;">Welcome to Leoxur Solutions Limited</h1>
+        <p style="color: var(--text-muted); font-size: 1.1rem; font-weight: 500;">Select a portal below to manage your workday shifts and schedules</p>
     </div>
 
-    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; max-width: 800px;">
-        <!-- Student Grid Route -->
+    <div style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; max-width: 800px; margin-top: 1rem;">
+        <!-- Employee Kiosk Route -->
         <a href="{% url 'student_grid' %}" style="text-decoration: none;">
-            <div class="kid-card present" style="width: 250px; text-align: center; cursor: pointer; transition: transform 0.2s;">
-                <div class="avatar-circle" style="background-color: #FDFFB6; margin: 0 auto 1rem auto; width: 80px; height: 80px; font-size: 2.5rem;">🎒</div>
-                <h2 style="margin: 0; color: #1e3a8a;">Kids Area</h2>
-                <p style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">Check in and share your mood!</p>
+            <div class="kid-card" style="width: 280px; text-align: center; cursor: pointer; --kid-color: var(--success-color); border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem 1.5rem; background-color: var(--card-bg); height: 100%;">
+                <div class="kid-avatar-wrapper" style="background-color: var(--success-light); margin: 0 auto 1.25rem auto; width: 88px; height: 88px; font-size: 2.8rem; display: flex; align-items: center; justify-content: center; border-radius: 50%;">🏢</div>
+                <h2 style="margin: 0; color: var(--text-main); font-weight: 850; font-size: 1.35rem;">Employee Time & Expense</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem; font-weight: 600; line-height: 1.5;">Check in or check out of your daily rostered shift via PIN.</p>
             </div>
         </a>
 
-        <!-- Teacher Portal Route -->
-        <!-- Teacher Portal Route -->
+        <!-- Manager Dashboard Route -->
         <a href="{% url 'teacher_dashboard' %}" style="text-decoration: none;">
-            <div class="kid-card present" style="width: 250px; text-align: center; cursor: pointer; transition: transform 0.2s; border-color: #3b82f6;">
-                <div class="avatar-circle" style="background-color: #bfdbfe; margin: 0 auto 1rem auto; width: 80px; height: 80px; font-size: 2.5rem;">🔑</div>
-                <h2 style="margin: 0; color: #1e3a8a;">Teacher Portal</h2>
-                <p style="color: #64748b; font-size: 0.9rem; margin-top: 0.5rem;">Manage classrooms and attendance</p>
+            <div class="kid-card" style="width: 280px; text-align: center; cursor: pointer; --kid-color: var(--primary-color); border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem 1.5rem; background-color: var(--card-bg); height: 100%;">
+                <div class="kid-avatar-wrapper" style="background-color: var(--primary-light); margin: 0 auto 1.25rem auto; width: 88px; height: 88px; font-size: 2.8rem; display: flex; align-items: center; justify-content: center; border-radius: 50%;">💼</div>
+                <h2 style="margin: 0; color: var(--text-main); font-weight: 850; font-size: 1.35rem;">Manager Portal</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem; font-weight: 600; line-height: 1.5;">Monitor employee hours, assign schedules, and view statistics.</p>
             </div>
         </a>
     </div>
 </div>
-
-<style>
-    .kid-card:hover {
-        transform: translateY(-8px);
-    }
-</style>
 {% endblock %}

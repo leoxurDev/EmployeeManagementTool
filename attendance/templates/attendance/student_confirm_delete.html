@@ -1,30 +1,31 @@
 {% extends 'attendance/base.html' %}
 
-{% block title %}Delete {{ student.first_name }} | Kindergarten Admin{% endblock %}
+{% block title %}Remove Employee Profile | Leoxur Solutions Limited{% endblock %}
 
 {% block content %}
-<div class="form-page-container">
-    <div class="kid-modal-card form-card confirm-delete-card">
-        <div class="modal-bubble-decor" style="background: var(--priority-high-glow)"></div>
-        
-        <div class="modal-header-section">
-            <h2 style="color: var(--priority-high-solid)">Are you sure? 😮</h2>
-            <p>You are about to remove <strong>{{ student.full_name }}</strong> from the active school roster.</p>
-        </div>
-        
-        <form method="POST" class="bubbly-form">
-            {% csrf_token %}
-            <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
-                This will keep their history but hide them from the morning check-in grid.
-            </p>
-            
-            <div class="form-actions-wrapper">
-                <a href="{% url 'teacher_dashboard' %}" class="bubbly-btn cancel-btn">No, Keep Student</a>
-                <button type="submit" class="bubbly-btn primary-btn delete-btn-real" style="background: var(--priority-high-solid); box-shadow: 0 6px 12px var(--priority-high-glow)">
-                    Yes, Remove 👋
-                </button>
-            </div>
-        </form>
+<div class="login-card" style="max-width: 500px; margin: 4rem auto; text-align: center; border-color: var(--danger-color);">
+    <div style="font-size: 3rem; margin-bottom: 1.5rem;">⚠️</div>
+    
+    <div class="modal-header-section" style="margin-bottom: 1.75rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 850; color: var(--text-main);">Deactivate Employee Profile</h2>
+        <p style="margin-top: 0.5rem; font-weight: 600;">
+            Are you sure you want to deactivate the profile for <strong>{{ student.full_name }}</strong>?
+        </p>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem; font-weight: 500;">
+            This will hide the employee from the daily check-in kiosk and rosters, but historical logs will remain intact.
+        </p>
     </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+            <a href="{% url 'teacher_dashboard' %}" class="bubbly-btn secondary-btn" style="padding: 0.65rem 1.5rem;">
+                Cancel
+            </a>
+            <button type="submit" class="bubbly-btn primary-btn" style="background-color: var(--danger-color); padding: 0.65rem 1.5rem;">
+                Deactivate Profile
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}

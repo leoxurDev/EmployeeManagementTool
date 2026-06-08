@@ -1,39 +1,45 @@
 {% extends 'attendance/base.html' %}
+{% load static %}
 
-{% block title %}{{ title }} | Kindergarten Admin{% endblock %}
+{% block title %}{{ title }} | Leoxur Solutions Limited{% endblock %}
 
 {% block content %}
-<div class="form-page-container">
-    <div class="kid-modal-card form-card">
-        <div class="modal-bubble-decor"></div>
-        
-        <div class="modal-header-section">
-            <h2>{{ title }}</h2>
-            <p>Fill in the details below to add a kid to the class roster! 🎒</p>
-        </div>
-        
-        <form method="POST" class="bubbly-form">
-            {% csrf_token %}
-            
-            {% for field in form %}
-                <div class="form-group-bubbly">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="field-error-bubble">
-                            {{ field.errors.as_text }}
-                        </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-            
-            <div class="form-actions-wrapper" style="margin-top: 2rem;">
-                <a href="{% url 'teacher_dashboard' %}" class="bubbly-btn cancel-btn">Cancel</a>
-                <button type="submit" class="bubbly-btn primary-btn">
-                    Save Student ✨
-                </button>
-            </div>
-        </form>
+<div class="login-card" style="max-width: 550px; margin: 3rem auto;">
+    <div class="modal-header-section" style="margin-bottom: 2rem;">
+        <h2 style="font-size: 1.6rem; font-weight: 850;">{{ title }}</h2>
+        <p>Fill out the profile details below</p>
     </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+        <div class="pin-error-message show" style="margin-bottom: 1.25rem;">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <span style="color: var(--danger-color); font-size: 0.8rem; font-weight: 700;">{{ field.errors }}</span>
+            {% endif %}
+            {% if field.help_text %}
+            <small style="color: var(--text-muted); font-size: 0.75rem; font-weight: 500;">{{ field.help_text }}</small>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
+            <a href="{% url 'teacher_dashboard' %}" class="bubbly-btn cancel-btn">
+                Cancel
+            </a>
+            <button type="submit" class="bubbly-btn primary-btn" style="padding: 0.75rem 1.5rem;">
+                💾 Save Employee
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}

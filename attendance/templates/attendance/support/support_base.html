@@ -18,11 +18,13 @@
         <div class="snow-user-nav">
             {% if active_engineer %}
                 <span style="color: #10b981; font-weight: 600;">👤 Active: {{ active_engineer.name }}</span>
+                <span style="color: #475569;">|</span>
+                <a href="{% url 'engineer_logout' %}" style="font-weight: 500; color: #ef4444; text-decoration: none;">🚪 Logout</a>
             {% else %}
                 <span style="color: #f59e0b; font-weight: 500;">👤 Simulated System User</span>
             {% endif %}
             <span style="color: #475569;">|</span>
-            <a href="{% url 'home' %}" style="font-weight: 500;">🏫 Exit to School Home</a>
+            <a href="{% url 'home' %}" style="font-weight: 500;">⏰ Exit to ShiftHub Home</a>
         </div>
     </header>
 
@@ -46,6 +48,11 @@
                 <li class="snow-sidebar-section">Support Setup</li>
                 <li class="snow-sidebar-item {% if request.resolver_match.url_name == 'group_list' or request.resolver_match.url_name == 'group_create' or request.resolver_match.url_name == 'group_edit' %}active{% endif %}">
                     <a href="{% url 'group_list' %}">👥 Assignment Groups</a>
+                </li>
+
+                <li class="snow-sidebar-section">Session Management</li>
+                <li class="snow-sidebar-item">
+                    <a href="{% url 'engineer_logout' %}" style="color: #ef4444;">🚪 Sign Out / Logout</a>
                 </li>
             </ul>
         </aside>

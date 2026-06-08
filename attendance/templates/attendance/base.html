@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Kindergarten Attendance{% endblock %}</title>
-    <!-- Playful Google Fonts -->
+    <title>{% block title %}Leoxur Solutions Limited | Employee Time & Expense{% endblock %}</title>
+    <!-- Corporate Modern Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
-    <!-- Kid Theme CSS -->
-    <link rel="stylesheet" href="{% static 'css/kid_theme.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..900&family=Inter:wght@300..900&display=swap" rel="stylesheet">
+    <!-- Corporate Theme CSS -->
+    <link rel="stylesheet" href="{% static 'css/employee_theme.css' %}">
     <!-- CSRF Token for JS AJAX -->
     <script>
         const CSRF_TOKEN = "{{ csrf_token }}";
@@ -27,7 +27,7 @@
     <!-- Confetti layer for celebrations -->
     <canvas id="confetti-canvas"></canvas>
 
-    <!-- Top One-Liner Ticker Bar -->
+    <!-- Top Shift Ticker Bar -->
     <div class="top-ticker-bar">
         <div class="ticker-marquee-track">
             <div class="ticker-marquee-list">
@@ -68,31 +68,26 @@
     </div>
 
     <div class="sky-background">
-        <!-- Floating cartoon clouds -->
-        <div class="cloud cloud-1"></div>
-        <div class="cloud cloud-2"></div>
-        <div class="cloud cloud-3"></div>
-        
         <div class="main-wrapper">
-            <!-- Playful Navigation Bar -->
+            <!-- Sleek Navbar -->
             <header class="playful-navbar">
                 <a href="{% url 'home' %}" class="navbar-brand">
-                    <span class="brand-emoji">🏫</span>
-                    <span class="brand-text">FocusFlow</span>
+                    <span class="brand-emoji">⏰</span>
+                    <span class="brand-text">Leoxur Solutions Limited</span>
                 </a>
                 <nav class="navbar-links">
                     <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
                         🏠 Home
                     </a>
                     <a href="{% url 'student_grid' %}" class="nav-link {% if request.resolver_match.url_name == 'student_grid' %}active{% endif %}">
-                        🎒 Kids Area
+                        🏢 Employee Time & Expense
                     </a>
                     <a href="{% url 'teacher_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' or request.resolver_match.url_name == 'teacher_login' or request.resolver_match.url_name == 'teacher_register' or request.resolver_match.url_name == 'admin_developer_page' or request.resolver_match.url_name == 'add_student' or request.resolver_match.url_name == 'edit_student' or request.resolver_match.url_name == 'delete_student' %}active{% endif %}">
-                        🔑 Teacher Portal
+                        💼 Manager Portal
                     </a>
                     {% if can_raise_support %}
                     <a href="{% url 'support_home' %}" class="nav-link {% if 'support/' in request.path and 'engineer' not in request.path %}active{% endif %}">
-                        🛠️ Tech Support
+                        🛠️ IT Desk
                     </a>
                     {% endif %}
                     <!-- Dark Mode Toggle Button -->
@@ -107,8 +102,8 @@
         </div>
     </div>
 
-    <!-- Kid Attendance Script -->
-    <script src="{% static 'js/kid_attendance.js' %}?v={% now 'U' %}"></script>
+    <!-- Corporate Attendance Script -->
+    <script src="{% static 'js/employee_attendance.js' %}?v={% now 'U' %}"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const themeBtn = document.getElementById("theme-toggle-btn");
