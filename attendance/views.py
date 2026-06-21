@@ -3,6 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 import csv
 from django.utils import timezone
+from datetime import timedelta
 from django.db.models import Count, Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -12,7 +13,8 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.views.decorators.csrf import ensure_csrf_cookie
 from .models import (
     Employee, Roster, Attendance, DepartmentOption, AppLayoutBlock,
-    AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission
+    AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission,
+    LeoxurEmail, LeoxurMessage, LeoxurTask, LeoxurTaskComment
 )
 from .forms import EmployeeForm
 
@@ -311,14 +313,14 @@ def manager_login(request):
 
 
 def manager_register(request):
-    if request.user.is_authenticated:
-        return redirect('teacher_dashboard')
+    if not request.user.is_authenticated or (not request.user.is_staff and not request.user.is_superuser):
+        messages.error(request, "Access denied. Only administrators can register new manager accounts. 🔐")
+        return redirect('teacher_login')
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            auth_login(request, user)
-            messages.success(request, f"Registration successful! Welcome, Manager {user.username}! 🏢")
+            messages.success(request, f"Manager account '{user.username}' created successfully! 💼")
             return redirect('teacher_dashboard')
         else:
             messages.error(request, "Registration failed. Please correct the errors below.")
@@ -1332,3 +1334,534 @@ def identity_manager(request):
         'engineers': engineers,
         'groups': groups,
     })
+
+
+# ==============================================================================
+# LEOXUR MAILS & CHAT COMMUNICATION SUITE VIEWS
+# ==============================================================================
+
+def get_all_leoxur_participants():
+    participants = []
+    
+    # 1. Managers (Django Users)
+    for u in User.objects.all():
+        participants.append({
+            'id': f"manager_{u.id}",
+            'name': f"{u.username} (Manager)",
+            'role': 'Manager',
+            'email': u.email or f"{u.username}@leoxur.com",
+            'avatar_emoji': '💼',
+            'avatar_color': '#4F46E5',
+        })
+        
+    # 2. Support Engineers
+    for eng in SupportEngineer.objects.filter(is_active=True):
+        participants.append({
+            'id': f"engineer_{eng.id}",
+            'name': f"{eng.name} (Support Engineer)",
+            'role': 'Support Engineer',
+            'email': eng.email,
+            'avatar_emoji': '🛠️',
+            'avatar_color': '#10B981',
+        })
+        
+    # 3. Employees
+    for emp in Employee.objects.filter(is_active=True):
+        participants.append({
+            'id': f"employee_{emp.id}",
+            'name': f"{emp.full_name} (Employee - {emp.department})",
+            'role': 'Employee',
+            'email': f"{emp.first_name.lower()}.{emp.last_name.lower()}@leoxur.com",
+            'avatar_emoji': emp.avatar_emoji or '👤',
+            'avatar_color': emp.avatar_color or '#6B7280',
+        })
+        
+    return participants
+
+def get_participant_by_id(participant_id):
+    parts = participant_id.split('_')
+    if len(parts) < 2:
+        return None
+    role, pk_str = parts[0], parts[1]
+    if not pk_str.isdigit():
+        return None
+    pk = int(pk_str)
+    
+    if role == 'manager':
+        u = User.objects.filter(pk=pk).first()
+        if u:
+            return {
+                'id': participant_id,
+                'name': f"{u.username} (Manager)",
+                'role': 'Manager',
+                'email': u.email or f"{u.username}@leoxur.com",
+                'avatar_emoji': '💼',
+                'avatar_color': '#4F46E5',
+            }
+    elif role == 'engineer':
+        eng = SupportEngineer.objects.filter(pk=pk).first()
+        if eng:
+            return {
+                'id': participant_id,
+                'name': f"{eng.name} (Support Engineer)",
+                'role': 'Support Engineer',
+                'email': eng.email,
+                'avatar_emoji': '🛠️',
+                'avatar_color': '#10B981',
+            }
+    elif role == 'employee':
+        emp = Employee.objects.filter(pk=pk).first()
+        if emp:
+            return {
+                'id': participant_id,
+                'name': f"{emp.full_name} (Employee - {emp.department})",
+                'role': 'Employee',
+                'email': f"{emp.first_name.lower()}.{emp.last_name.lower()}@leoxur.com",
+                'avatar_emoji': emp.avatar_emoji or '👤',
+                'avatar_color': emp.avatar_color or '#6B7280',
+            }
+    return None
+
+def leoxur_comm_dashboard(request):
+    # Determine active communication user
+    active_user_id = request.session.get('leoxur_user_id')
+    active_user = None
+
+    # Auto-login if Django user is authenticated and session is empty
+    if not active_user_id and request.user.is_authenticated:
+        active_user_id = f"manager_{request.user.id}"
+        request.session['leoxur_user_id'] = active_user_id
+        
+    if active_user_id:
+        active_user = get_participant_by_id(active_user_id)
+        
+    # Get all active participants for dropdowns/pickers
+    all_users = get_all_leoxur_participants()
+    all_employees = Employee.objects.filter(is_active=True).order_by('first_name')
+    all_engineers = SupportEngineer.objects.filter(is_active=True).order_by('name')
+    
+    context = {
+        'active_user_id': active_user_id,
+        'active_user': active_user,
+        'all_users': all_users,
+        'all_employees': all_employees,
+        'all_engineers': all_engineers,
+        'schedule_status': get_shift_schedule_status(),
+    }
+    return render(request, 'attendance/leoxur_comm.html', context)
+
+
+@require_POST
+def leoxur_comm_auth(request):
+    import json
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')  # e.g., 'manager_1', 'employee_3', 'engineer_2'
+        secret = data.get('secret', '').strip()  # password or pin
+        
+        if not user_id:
+            return JsonResponse({'success': False, 'error': 'Please select a profile.'})
+            
+        parts = user_id.split('_')
+        if len(parts) < 2:
+            return JsonResponse({'success': False, 'error': 'Invalid profile ID.'})
+            
+        role, pk_str = parts[0], parts[1]
+        if not pk_str.isdigit():
+            return JsonResponse({'success': False, 'error': 'Invalid profile ID.'})
+        pk = int(pk_str)
+        
+        if role == 'manager':
+            # Check if already authenticated via Django session
+            if request.user.is_authenticated and request.user.id == pk:
+                request.session['leoxur_user_id'] = user_id
+                return JsonResponse({'success': True, 'user_id': user_id})
+            else:
+                u = User.objects.filter(pk=pk).first()
+                if not u:
+                    return JsonResponse({'success': False, 'error': 'Manager not found.'})
+                # Authenticate with credentials
+                from django.contrib.auth import authenticate
+                user = authenticate(username=u.username, password=secret)
+                if user is not None:
+                    auth_login(request, user)
+                    request.session['leoxur_user_id'] = user_id
+                    return JsonResponse({'success': True, 'user_id': user_id})
+                else:
+                    return JsonResponse({'success': False, 'error': 'Invalid password.'})
+                    
+        elif role == 'engineer':
+            eng = SupportEngineer.objects.filter(pk=pk, is_active=True).first()
+            if not eng:
+                return JsonResponse({'success': False, 'error': 'Support Engineer not found or inactive.'})
+            if eng.password == secret:
+                request.session['leoxur_user_id'] = user_id
+                return JsonResponse({'success': True, 'user_id': user_id})
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid engineer password.'})
+                
+        elif role == 'employee':
+            emp = Employee.objects.filter(pk=pk, is_active=True).first()
+            if not emp:
+                return JsonResponse({'success': False, 'error': 'Employee not found or inactive.'})
+            if emp.pin_code == secret:
+                request.session['leoxur_user_id'] = user_id
+                return JsonResponse({'success': True, 'user_id': user_id})
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid PIN.'})
+                
+        return JsonResponse({'success': False, 'error': 'Access Denied: Invalid role.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_POST
+def leoxur_comm_logout(request):
+    if 'leoxur_user_id' in request.session:
+        del request.session['leoxur_user_id']
+    return JsonResponse({'success': True})
+
+
+def leoxur_comm_data(request):
+    active_user_id = request.session.get('leoxur_user_id')
+    if not active_user_id:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        
+    participants = get_all_leoxur_participants()
+    participant_map = {p['id']: p for p in participants}
+    
+    # 1. Emails: sent to or received by the active user
+    emails_qs = LeoxurEmail.objects.filter(Q(sender_id=active_user_id) | Q(receiver_id=active_user_id)).order_by('-created_at')
+    emails = []
+    for email in emails_qs:
+        sender = participant_map.get(email.sender_id, {'name': email.sender_id, 'avatar_emoji': '✉️', 'avatar_color': '#9CA3AF'})
+        receiver = participant_map.get(email.receiver_id, {'name': email.receiver_id, 'avatar_emoji': '✉️', 'avatar_color': '#9CA3AF'})
+        emails.append({
+            'id': email.id,
+            'sender_id': email.sender_id,
+            'sender': sender,
+            'receiver_id': email.receiver_id,
+            'receiver': receiver,
+            'subject': email.subject,
+            'body': email.body,
+            'created_at': timezone.localtime(email.created_at).strftime('%b %d, %Y %I:%M %p'),
+            'is_read': email.is_read,
+        })
+        
+    # 2. Chats/Messages:
+    # Get group channel rooms: 'general', 'support', 'managers' (restricted to managers)
+    # Plus direct message rooms involving active user: 'direct_a_b'
+    rooms = ['general', 'support']
+    if active_user_id.startswith('manager_'):
+        rooms.append('managers')
+        
+    messages_qs = LeoxurMessage.objects.filter(
+        Q(room_id__in=rooms) |
+        (Q(room_id__startswith='direct_') & Q(room_id__contains=active_user_id))
+    ).order_by('created_at')
+    
+    messages = []
+    for msg in messages_qs:
+        # Extra security check: if direct chat, verify user is in room_id
+        if msg.room_id.startswith('direct_') and active_user_id not in msg.room_id:
+            continue
+            
+        sender = participant_map.get(msg.sender_id, {'name': msg.sender_id, 'avatar_emoji': '👤', 'avatar_color': '#9CA3AF'})
+        
+        # Populate parent message details for quoted replies
+        parent_sender_name = None
+        parent_content = None
+        if msg.parent_message:
+            parent_sender = participant_map.get(msg.parent_message.sender_id, {'name': msg.parent_message.sender_id})
+            parent_sender_name = parent_sender['name']
+            parent_content = msg.parent_message.content
+            
+        messages.append({
+            'id': msg.id,
+            'sender_id': msg.sender_id,
+            'sender': sender,
+            'receiver_id': msg.receiver_id,
+            'room_id': msg.room_id,
+            'content': msg.content,
+            'message_type': msg.message_type,
+            'created_at': timezone.localtime(msg.created_at).strftime('%I:%M %p'),
+            'created_at_full': timezone.localtime(msg.created_at).strftime('%b %d, %Y %I:%M %p'),
+            'parent_id': msg.parent_message.id if msg.parent_message else None,
+            'parent_sender_name': parent_sender_name,
+            'parent_content': parent_content,
+        })
+        
+    # 3. Tasks/Jira Board Tasks
+    # Auto-archive tasks that have been in 'done' status for more than 24 hours
+    cutoff_time = timezone.now() - timedelta(hours=24)
+    LeoxurTask.objects.filter(status='done', updated_at__lte=cutoff_time).update(status='archived')
+
+    tasks_qs = LeoxurTask.objects.all().order_by('-created_at')
+    tasks = []
+    for task in tasks_qs:
+        creator = participant_map.get(task.creator_id, {'name': task.creator_id, 'avatar_emoji': '👤', 'avatar_color': '#9CA3AF'})
+        assignee = participant_map.get(task.assignee_id, {'name': 'Unassigned', 'avatar_emoji': '👤', 'avatar_color': '#E5E7EB'}) if task.assignee_id else {'name': 'Unassigned', 'avatar_emoji': '👤', 'avatar_color': '#E5E7EB'}
+        
+        comments_qs = task.comments.all().order_by('created_at')
+        comments = []
+        for comment in comments_qs:
+            comments.append({
+                'id': comment.id,
+                'author_id': comment.author_id,
+                'author_name': comment.author_name,
+                'content': comment.content,
+                'created_at': timezone.localtime(comment.created_at).strftime('%b %d, %Y %I:%M %p'),
+            })
+
+        tasks.append({
+            'id': task.id,
+            'title': task.title,
+            'description': task.description or '',
+            'priority': task.priority,
+            'status': task.status,
+            'creator_id': task.creator_id,
+            'creator': creator,
+            'assignee_id': task.assignee_id or '',
+            'assignee': assignee,
+            'created_at': timezone.localtime(task.created_at).strftime('%b %d, %Y %I:%M %p'),
+            'updated_at': timezone.localtime(task.updated_at).strftime('%b %d, %Y %I:%M %p'),
+            'comments': comments,
+        })
+
+    active_user = participant_map.get(active_user_id)
+    
+    return JsonResponse({
+        'success': True,
+        'active_user': active_user,
+        'participants': participants,
+        'emails': emails,
+        'messages': messages,
+        'tasks': tasks,
+        'meetings': [],
+    })
+
+
+@require_POST
+def leoxur_send_email(request):
+    active_user_id = request.session.get('leoxur_user_id')
+    if not active_user_id:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        
+    import json
+    try:
+        data = json.loads(request.body)
+        receiver_id = data.get('receiver_id')
+        subject = data.get('subject', '').strip()
+        body = data.get('body', '').strip()
+        
+        if not receiver_id or not subject or not body:
+            return JsonResponse({'success': False, 'error': 'Receiver, Subject, and Body are required.'})
+            
+        email = LeoxurEmail.objects.create(
+            sender_id=active_user_id,
+            receiver_id=receiver_id,
+            subject=subject,
+            body=body
+        )
+        return JsonResponse({'success': True, 'email_id': email.id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_POST
+def leoxur_send_chat(request):
+    active_user_id = request.session.get('leoxur_user_id')
+    if not active_user_id:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        
+    import json
+    try:
+        data = json.loads(request.body)
+        room_id = data.get('room_id')
+        content = data.get('content', '').strip()
+        message_type = data.get('message_type', 'text')
+        parent_id = data.get('parent_id')
+        
+        if not room_id or not content:
+            return JsonResponse({'success': False, 'error': 'Room ID and Content are required.'})
+            
+        # Security checks
+        if room_id == 'managers' and not active_user_id.startswith('manager_'):
+            return JsonResponse({'success': False, 'error': 'Access denied to managers channel.'}, status=403)
+            
+        if room_id.startswith('direct_') and active_user_id not in room_id:
+            return JsonResponse({'success': False, 'error': 'Access denied to direct chat room.'}, status=403)
+            
+        # Determine direct receiver if direct chat room
+        receiver_id = None
+        if room_id.startswith('direct_'):
+            parts = room_id.replace('direct_', '').split('_')
+            # Look up other user from participants
+            for participant in get_all_leoxur_participants():
+                p_id = participant['id']
+                if p_id != active_user_id and p_id in room_id:
+                    receiver_id = p_id
+                    break
+                    
+        parent_msg = None
+        if parent_id:
+            parent_msg = LeoxurMessage.objects.filter(id=parent_id).first()
+            
+        msg = LeoxurMessage.objects.create(
+            sender_id=active_user_id,
+            receiver_id=receiver_id,
+            room_id=room_id,
+            content=content,
+            message_type=message_type,
+            parent_message=parent_msg
+        )
+        return JsonResponse({'success': True, 'message_id': msg.id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_POST
+def leoxur_read_email(request):
+    active_user_id = request.session.get('leoxur_user_id')
+    if not active_user_id:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    import json
+    try:
+        data = json.loads(request.body)
+        email_id = data.get('email_id')
+        LeoxurEmail.objects.filter(id=email_id, receiver_id=active_user_id).update(is_read=True)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_POST
+def leoxur_create_task(request):
+    active_user_id = request.session.get('leoxur_user_id')
+    if not active_user_id:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        
+    import json
+    try:
+        data = json.loads(request.body)
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        priority = data.get('priority', 'medium').strip().lower()
+        status = data.get('status', 'backlog').strip().lower()
+        assignee_id = data.get('assignee_id', '').strip() or None
+        
+        if not title:
+            return JsonResponse({'success': False, 'error': 'Title is required.'})
+            
+        task = LeoxurTask.objects.create(
+            title=title,
+            description=description,
+            priority=priority,
+            status=status,
+            creator_id=active_user_id,
+            assignee_id=assignee_id
+        )
+        return JsonResponse({'success': True, 'task_id': task.id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_POST
+def leoxur_update_task(request):
+    active_user_id = request.session.get('leoxur_user_id')
+    if not active_user_id:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        
+    import json
+    try:
+        data = json.loads(request.body)
+        task_id = data.get('task_id')
+        task = get_object_or_404(LeoxurTask, id=task_id)
+        
+        if 'status' in data:
+            new_status = data.get('status').strip().lower()
+            if new_status != task.status:
+                # 1. Review status transition check: only managers can move out of in_review
+                if task.status == 'in_review':
+                    if not active_user_id.startswith('manager_'):
+                        return JsonResponse({'success': False, 'error': 'Only managers can approve or reject issues in review.'}, status=403)
+                # 2. Assignee check: if assigned, only the assignee or a manager can move it
+                elif task.assignee_id and task.assignee_id != active_user_id and not active_user_id.startswith('manager_'):
+                    return JsonResponse({'success': False, 'error': 'Only the assignee can change the status of this task.'}, status=403)
+                
+                task.status = new_status
+                
+        if 'title' in data:
+            task.title = data.get('title').strip()
+        if 'description' in data:
+            task.description = data.get('description').strip()
+        if 'priority' in data:
+            task.priority = data.get('priority').strip().lower()
+        if 'assignee_id' in data:
+            assignee_id = data.get('assignee_id', '').strip() or None
+            task.assignee_id = assignee_id
+            
+        task.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_POST
+def leoxur_delete_task(request):
+    active_user_id = request.session.get('leoxur_user_id')
+    if not active_user_id:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        
+    import json
+    try:
+        data = json.loads(request.body)
+        task_id = data.get('task_id')
+        task = get_object_or_404(LeoxurTask, id=task_id)
+        task.delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@require_POST
+def leoxur_create_task_comment(request):
+    active_user_id = request.session.get('leoxur_user_id')
+    if not active_user_id:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        
+    import json
+    try:
+        data = json.loads(request.body)
+        task_id = data.get('task_id')
+        content = data.get('content', '').strip()
+        if not content:
+            return JsonResponse({'success': False, 'error': 'Comment content cannot be empty.'})
+            
+        task = get_object_or_404(LeoxurTask, id=task_id)
+        
+        # Get active user display name
+        participants = get_all_leoxur_participants()
+        participant_map = {p['id']: p for p in participants}
+        active_user = participant_map.get(active_user_id, {'name': active_user_id})
+        
+        comment = LeoxurTaskComment.objects.create(
+            task=task,
+            author_id=active_user_id,
+            author_name=active_user.get('name', active_user_id),
+            content=content
+        )
+        return JsonResponse({
+            'success': True,
+            'comment': {
+                'id': comment.id,
+                'author_id': comment.author_id,
+                'author_name': comment.author_name,
+                'content': comment.content,
+                'created_at': timezone.localtime(comment.created_at).strftime('%b %d, %Y %I:%M %p'),
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+

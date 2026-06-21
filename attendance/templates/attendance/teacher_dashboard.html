@@ -9,19 +9,25 @@
 <div class="grid-header" style="margin-bottom: 1.5rem;">
     <div>
         <h1 style="font-size: 2rem; font-weight: 800;">Workforce Manager Dashboard</h1>
-        <p style="color: var(--text-muted); font-weight: 500;">Monitor employee attendance, shifts, and active rosters 📊</p>
+        <p style="color: var(--text-muted); font-weight: 500;">Monitor employee attendance, shifts, and active rosters</p>
     </div>
-    <div style="display: flex; gap: 0.5rem; align-items: center;">
+    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
         <a href="{% url 'export_student_csv' %}?classroom={{ selected_classroom }}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
-            📥 Export CSV Logs
+            Export CSV Logs
         </a>
         {% if request.user.is_staff or request.user.is_superuser %}
         <a href="{% url 'admin_developer_page' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem; border-color: var(--primary-color); color: var(--primary-color);">
-            🛠️ Customizer
+            Customizer
+        </a>
+        <a href="{% url 'teacher_register' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+            Register Manager
         </a>
         {% endif %}
         <a href="{% url 'add_student' %}" class="bubbly-btn primary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
-            ➕ Add Employee
+            Add Employee
+        </a>
+        <a href="{% url 'teacher_logout' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem; border-color: var(--danger-color); color: var(--danger-color);">
+            Logout
         </a>
     </div>
 </div>
@@ -43,10 +49,10 @@
     <!-- View Modes switcher -->
     <div style="display: flex; background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 0.25rem; border-radius: var(--radius-sm);">
         <button id="view-grid-btn" class="bubbly-btn active" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: none;">
-            🎴 Cards View
+            Cards View
         </button>
         <button id="view-list-btn" class="bubbly-btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--text-muted);">
-            📋 Roster List
+            Roster List
         </button>
     </div>
 </div>
@@ -76,7 +82,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
         <div>
             <h3 class="roster-editor-title" style="margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 800;">
-                📅 Shift Roster Scheduler
+                Shift Roster Scheduler
             </h3>
             <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
                 Schedule shift roster assignments for your team by date. Create, update, or remove rosters.
@@ -145,7 +151,7 @@
                                 <option value="none" {% if not employee.today_roster %}selected{% endif %}>Off Shift (None)</option>
                             </select>
                             <button type="submit" class="bubbly-btn primary-btn" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">
-                                💾 Save
+                                Save
                             </button>
                         </form>
                     </td>
@@ -158,7 +164,7 @@
                             <input type="hidden" name="classroom" value="{{ selected_classroom }}">
                             <input type="hidden" name="shift" value="none">
                             <button type="submit" class="bubbly-btn secondary-btn" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; border-color: var(--danger-color); color: var(--danger-color); background-color: var(--danger-light); font-weight: 700;" onclick="return confirm('Remove shift assignment for {{ employee.full_name }}?')">
-                                🗑️ Delete
+                                Delete
                             </button>
                         </form>
                         {% else %}
@@ -184,13 +190,13 @@
 <div id="roster-grid-view" class="kids-grid-container" style="display: grid;">
     {% for employee in students %}
     <div class="kid-card" data-student-id="{{ employee.id }}" style="--kid-color: {{ employee.avatar_color }}; cursor: default;">
-        <div class="kid-avatar-wrapper" style="width: 68px; height: 68px; font-size: 1.8rem; margin-bottom: 0.75rem;">
-            <span class="kid-emoji">{{ employee.avatar_emoji }}</span>
-            <div class="status-indicator-badge" style="width: 24px; height: 24px; font-size: 0.85rem;">
+        <div class="kid-avatar-wrapper" style="width: 68px; height: 68px; font-size: 1.2rem; margin-bottom: 0.75rem;">
+            <span class="kid-emoji">{{ employee.initials }}</span>
+            <div class="status-indicator-badge" style="width: auto; min-width: 24px; padding: 0 4px; border-radius: 9999px; font-size: 0.65rem; font-weight: 800;">
                 {% if employee.today_status %}
-                    {% if employee.today_status.checked_out_at %}✅{% else %}🟢{% endif %}
+                    {% if employee.today_status.checked_out_at %}Out{% else %}In{% endif %}
                 {% else %}
-                    ❌
+                    Out
                 {% endif %}
             </div>
         </div>
@@ -200,7 +206,7 @@
             PIN: 
             <span class="pin-digits-hidden">••••</span>
             <span class="pin-digits-shown" style="display: none;">{{ employee.pin_code }}</span>
-            <button class="pin-toggle-btn" style="background: none; border: none; cursor: pointer; font-size: 0.85rem; margin-left: 0.25rem;">👁️</button>
+            <button class="pin-toggle-btn" style="background: none; border: none; cursor: pointer; font-size: 0.85rem; margin-left: 0.25rem;">Show</button>
         </p>
 
         <p class="kid-status-text" style="font-size: 0.8rem; margin-bottom: 1rem;">
@@ -230,9 +236,9 @@
 
         <!-- CRUD Actions -->
         <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-            <a href="{% url 'edit_student' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--primary-color);">✏️ Edit</a>
+            <a href="{% url 'edit_student' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--primary-color);">Edit</a>
             <span style="color: var(--border-color);">|</span>
-            <a href="{% url 'delete_student' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--danger-color);">🗑️ Remove</a>
+            <a href="{% url 'delete_student' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--danger-color);">Remove</a>
         </div>
     </div>
     {% endfor %}
@@ -259,8 +265,8 @@
             <tr data-student-id="{{ employee.id }}">
                 <td>
                     <div class="employee-row-info">
-                        <div class="employee-row-avatar" style="--avatar-color: {{ employee.avatar_color }}">
-                            {{ employee.avatar_emoji }}
+                        <div class="employee-row-avatar" style="--avatar-color: {{ employee.avatar_color }}; font-size: 0.85rem; font-weight:800; display:flex; align-items:center; justify-content:center; color:#1e293b;">
+                            {{ employee.initials }}
                         </div>
                         <div>
                             <div class="employee-row-name">{{ employee.full_name }}</div>
@@ -271,7 +277,7 @@
                 <td>
                     <span class="pin-digits-hidden">••••</span>
                     <span class="pin-digits-shown" style="display: none;">{{ employee.pin_code }}</span>
-                    <button class="pin-toggle-btn" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; margin-left: 0.25rem;">👁️</button>
+                    <button class="pin-toggle-btn" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; margin-left: 0.25rem;">Show</button>
                 </td>
                 <td>
                     {% if employee.today_roster %}
@@ -331,10 +337,10 @@
 <div class="support-main-container">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
         <h2 style="font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
-            🛠️ ServiceNow IT Support Portal
+            ServiceNow IT Support Portal
         </h2>
         <a href="{% url 'support_home' %}" class="bubbly-btn primary-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
-            🆕 Raise Support Ticket
+            Raise Support Ticket
         </a>
     </div>
     
@@ -392,7 +398,7 @@
     </div>
     {% else %}
     <p style="color: var(--text-muted); font-size: 0.95rem; font-weight: 600; text-align: center; padding: 2rem 0;">
-        No support requests raised recently. All systems operational. 🟢
+        No support requests raised recently. All systems operational.
     </p>
     {% endif %}
 </div>

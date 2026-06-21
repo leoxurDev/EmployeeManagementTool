@@ -81,6 +81,12 @@ class Employee(models.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
 
+    @property
+    def initials(self):
+        first = self.first_name[0] if self.first_name else ''
+        last = self.last_name[0] if self.last_name else ''
+        return (first + last).upper()
+
     def today_attendance(self):
         today = timezone.localdate()
         return self.attendance_set.filter(date=today).first()
@@ -340,3 +346,82 @@ class EmployeeSupportPermission(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Can raise support: {self.can_raise_tickets}"
+
+
+class LeoxurEmail(models.Model):
+    sender_id = models.CharField(max_length=50) # e.g. employee_1, manager_1, engineer_1
+    receiver_id = models.CharField(max_length=50) # e.g. employee_2
+    subject = models.CharField(max_length=255)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Email from {self.sender_id} to {self.receiver_id}: {self.subject}"
+
+
+class LeoxurMessage(models.Model):
+    sender_id = models.CharField(max_length=50)
+    receiver_id = models.CharField(max_length=50, blank=True, null=True) # None for group chats/channels
+    room_id = models.CharField(max_length=100) # e.g. 'general', 'support', 'managers', or direct_chat key
+    content = models.TextField()
+    message_type = models.CharField(max_length=20, default='text') # text, system, meeting_invite
+    created_at = models.DateTimeField(auto_now_add=True)
+    parent_message = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='replies')
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Message by {self.sender_id} in {self.room_id} at {self.created_at}"
+
+
+class LeoxurTask(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('highest', 'Highest'),
+    ]
+
+    STATUS_CHOICES = [
+        ('backlog', 'Backlog'),
+        ('in_progress', 'In Progress'),
+        ('in_review', 'In Review'),
+        ('done', 'Done'),
+        ('archived', 'Archived'),
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='backlog')
+    creator_id = models.CharField(max_length=50) # e.g. manager_1, employee_1, engineer_1
+    assignee_id = models.CharField(max_length=50, blank=True, null=True) # e.g. manager_1, employee_2, engineer_1
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.status}) - Priority: {self.priority}"
+
+
+class LeoxurTaskComment(models.Model):
+    task = models.ForeignKey(LeoxurTask, on_delete=models.CASCADE, related_name='comments')
+    author_id = models.CharField(max_length=50) # e.g. employee_1, manager_1
+    author_name = models.CharField(max_length=100)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Comment by {self.author_name} on TSK-{self.task_id} at {self.created_at}"
+
+

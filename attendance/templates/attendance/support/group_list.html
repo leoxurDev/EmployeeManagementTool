@@ -5,7 +5,7 @@
 {% block portal_content %}
 <div class="snow-page-header">
     <h1>Assignment Groups</h1>
-    <a href="{% url 'group_create' %}" class="snow-btn snow-btn-primary">➕ Add Group</a>
+    <a href="{% url 'group_create' %}" class="snow-btn snow-btn-primary">Add Group</a>
 </div>
 
 <div class="snow-table-container">
@@ -37,7 +37,6 @@
         </table>
     {% else %}
         <div style="padding: 3rem; text-align: center; color: var(--snow-secondary-text);">
-            <span style="font-size: 2.5rem; display: block; margin-bottom: 1rem;">👥</span>
             <h3>No assignment groups defined yet.</h3>
             <p>Seeding will occur automatically when loading the dashboard, or click "Add Group" above.</p>
         </div>

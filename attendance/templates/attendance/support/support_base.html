@@ -13,18 +13,18 @@
     <!-- Top ServiceNow Navigation Bar -->
     <header class="snow-header">
         <a href="{% url 'engineer_dashboard' %}" class="snow-logo">
-            <span>💻</span> IT Tech Services <span class="badge" style="background-color: #d97706;">Leoxur Inc.</span>
+            IT Tech Services <span class="badge" style="background-color: #d97706;">Leoxur Inc.</span>
         </a>
         <div class="snow-user-nav">
             {% if active_engineer %}
-                <span style="color: #10b981; font-weight: 600;">👤 Active: {{ active_engineer.name }}</span>
+                <span style="color: #10b981; font-weight: 600;">Active: {{ active_engineer.name }}</span>
                 <span style="color: #475569;">|</span>
-                <a href="{% url 'engineer_logout' %}" style="font-weight: 500; color: #ef4444; text-decoration: none;">🚪 Logout</a>
+                <a href="{% url 'engineer_logout' %}" style="font-weight: 500; color: #ef4444; text-decoration: none;">Logout</a>
             {% else %}
-                <span style="color: #f59e0b; font-weight: 500;">👤 Simulated System User</span>
+                <span style="color: #f59e0b; font-weight: 500;">Simulated System User</span>
             {% endif %}
             <span style="color: #475569;">|</span>
-            <a href="{% url 'home' %}" style="font-weight: 500;">⏰ Exit to ShiftHub Home</a>
+            <a href="{% url 'home' %}" style="font-weight: 500;">Exit to ShiftHub Home</a>
         </div>
     </header>
 
@@ -34,25 +34,25 @@
             <ul class="snow-sidebar-menu">
                 <li class="snow-sidebar-section">Incident Management</li>
                 <li class="snow-sidebar-item {% if request.resolver_match.url_name == 'engineer_dashboard' %}active{% endif %}">
-                    <a href="{% url 'engineer_dashboard' %}">📂 Active Tickets</a>
+                    <a href="{% url 'engineer_dashboard' %}">Active Tickets</a>
                 </li>
 
                 <li class="snow-sidebar-section">User Administration</li>
                 <li class="snow-sidebar-item {% if request.resolver_match.url_name == 'engineer_list' or request.resolver_match.url_name == 'engineer_create' or request.resolver_match.url_name == 'engineer_edit' %}active{% endif %}">
-                    <a href="{% url 'engineer_list' %}">👷 Support Engineers</a>
+                    <a href="{% url 'engineer_list' %}">Support Engineers</a>
                 </li>
                 <li class="snow-sidebar-item {% if request.resolver_match.url_name == 'identity_manager' %}active{% endif %}">
-                    <a href="{% url 'identity_manager' %}">🔐 Identity Manager</a>
+                    <a href="{% url 'identity_manager' %}">Identity Manager</a>
                 </li>
 
                 <li class="snow-sidebar-section">Support Setup</li>
                 <li class="snow-sidebar-item {% if request.resolver_match.url_name == 'group_list' or request.resolver_match.url_name == 'group_create' or request.resolver_match.url_name == 'group_edit' %}active{% endif %}">
-                    <a href="{% url 'group_list' %}">👥 Assignment Groups</a>
+                    <a href="{% url 'group_list' %}">Assignment Groups</a>
                 </li>
 
                 <li class="snow-sidebar-section">Session Management</li>
                 <li class="snow-sidebar-item">
-                    <a href="{% url 'engineer_logout' %}" style="color: #ef4444;">🚪 Sign Out / Logout</a>
+                    <a href="{% url 'engineer_logout' %}" style="color: #ef4444;">Sign Out / Logout</a>
                 </li>
             </ul>
         </aside>
@@ -62,7 +62,7 @@
             <!-- Simulated Identity Banner for testing permissions and name attributes in SQLite -->
             <div class="simulation-banner">
                 <div>
-                    <strong>⚙️ Simulation Control:</strong> You are acting as: 
+                    <strong>Simulation Control:</strong> You are acting as: 
                     {% if active_engineer %}
                         <u>{{ active_engineer.name }}</u> ({{ active_engineer.groups.all|join:", "|default:"No Group" }})
                     {% else %}

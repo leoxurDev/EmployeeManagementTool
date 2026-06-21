@@ -5,7 +5,7 @@
 {% block portal_content %}
 <div class="snow-page-header">
     <div style="display: flex; align-items: center; gap: 1rem;">
-        <a href="{% url 'engineer_dashboard' %}" class="snow-btn snow-btn-secondary">⬅️ Back</a>
+        <a href="{% url 'engineer_dashboard' %}" class="snow-btn snow-btn-secondary">Back</a>
         <h1>Incident Record: {{ ticket.number }}</h1>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -17,7 +17,7 @@
         {% endwith %}
         <!-- Shortcut to Client view -->
         <a href="{% url 'support_ticket_view' ticket.number %}" target="_blank" class="snow-btn snow-btn-secondary">
-            👁️ Open Client View
+            Open Client View
         </a>
     </div>
 </div>
@@ -103,8 +103,8 @@
     <!-- Update Notes & Comments Area -->
     <div class="snow-notes-box">
         <div class="snow-notes-tabs">
-            <button type="button" class="snow-tab-btn active-worknote" id="tab-worknote" onclick="switchNoteTab('worknote')">🔒 Work notes (Private)</button>
-            <button type="button" class="snow-tab-btn" id="tab-comment" onclick="switchNoteTab('comment')">👁️ Additional comments (Customer visible)</button>
+            <button type="button" class="snow-tab-btn active-worknote" id="tab-worknote" onclick="switchNoteTab('worknote')">Work Notes (Private)</button>
+            <button type="button" class="snow-tab-btn" id="tab-comment" onclick="switchNoteTab('comment')">Additional Comments (Customer Visible)</button>
         </div>
 
         <!-- Textarea container for Work Note -->
@@ -130,7 +130,7 @@
 <!-- Incident History Activity Stream -->
 <div class="snow-form-card" style="margin-top: 2rem;">
     <h2 style="font-size: 1.25rem; font-weight: 600; margin-top: 0; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-        📊 Activity Stream (History log)
+        Activity Stream (History log)
     </h2>
 
     <div class="snow-activity-stream">
@@ -140,9 +140,9 @@
                     <div class="activity-meta">
                         <span class="activity-badge">
                             {% if act.activity_type == 'work_note' %}
-                                🔒 Work Note
+                                Work Note
                             {% else %}
-                                👁️ Additional Comment
+                                Additional Comment
                             {% endif %}
                         </span>
                         <span>

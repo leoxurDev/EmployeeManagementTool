@@ -28,7 +28,7 @@
         <!-- Left Column: Submit Ticket Form -->
         <div class="kid-card" style="padding: 2rem; background-color: var(--card-bg); cursor: default; align-items: stretch; text-align: left;">
             <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-top: 0; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                📝 Open a New Ticket
+                Open a New Ticket
             </h2>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; font-weight: 500;">Need help with the shift kiosk, manager dashboard, database access, or hardware issues?</p>
             
@@ -52,10 +52,10 @@
                 <div class="form-group">
                     <label>Priority Level:</label>
                     <select name="priority" class="form-select">
-                        <option value="low">🟢 Low (General query or request)</option>
-                        <option value="moderate" selected>🟡 Moderate (Single user affected)</option>
-                        <option value="high">🟠 High (Department flow is blocked)</option>
-                        <option value="critical">🔴 Critical (System outage / Security concern)</option>
+                        <option value="low">Low (General query or request)</option>
+                        <option value="moderate" selected>Moderate (Single user affected)</option>
+                        <option value="high">High (Department flow is blocked)</option>
+                        <option value="critical">Critical (System outage / Security concern)</option>
                     </select>
                 </div>
 
@@ -70,7 +70,7 @@
             <!-- Ticket Lookup -->
             <div class="kid-card" style="padding: 2rem; background-color: var(--card-bg); cursor: default; align-items: stretch; text-align: left;">
                 <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-top: 0; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    🔍 Track Ticket Status
+                    Track Ticket Status
                 </h2>
                 <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; font-weight: 500;">Enter your Ticket Number (e.g. <b>TKT100001</b>) to check status and log updates.</p>
                 
@@ -84,11 +84,10 @@
 
             <!-- Staff Portal Callout -->
             <div class="kid-card" style="padding: 2rem; background-color: var(--warning-light); border-color: var(--warning-color); text-align: center; cursor: default;">
-                <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">💻</span>
                 <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin: 0 0 0.5rem 0;">Support Staff Only</h3>
                 <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; font-weight: 600; line-height: 1.4;">Access the ServiceNow internal queue to assign tickets, update SLA records, and write internal work notes.</p>
                 <a href="{% url 'engineer_dashboard' %}" class="bubbly-btn primary-btn" style="background-color: var(--warning-color); width: 100%;">
-                    Open ServiceNow Portal ➔
+                    Open ServiceNow Portal
                 </a>
             </div>
         </div>
@@ -97,7 +96,7 @@
     <!-- Bottom Section: Recent Tickets List/Grid -->
     <div class="kid-card" style="padding: 2rem; background-color: var(--card-bg); margin-top: 2rem; cursor: default; align-items: stretch; text-align: left;">
         <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-top: 0; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
-            📋 Support Incidents & Status
+            Support Incidents &amp; Status
         </h2>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; font-weight: 500;">
             Below is the listing of active support tickets. Click any ticket number to see detailed activities, track resolution times, and add comments.
@@ -132,7 +131,7 @@
             </div>
         {% else %}
             <div style="text-align: center; padding: 2.5rem; border: 1px dashed var(--border-color); border-radius: var(--radius-md); color: var(--text-muted); font-weight: 600;">
-                No support tickets logged yet. All systems operational. 🟢
+                No support tickets logged yet. All systems operational.
             </div>
         {% endif %}
     </div>

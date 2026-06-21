@@ -42,4 +42,17 @@ urlpatterns = [
     path('support/group/create/', views.group_create, name='group_create'),
     path('support/group/edit/<int:pk>/', views.group_edit, name='group_edit'),
     path('support/group/delete/<int:pk>/', views.group_delete, name='group_delete'),
+
+    # Leoxur Mails & Chat Communication Suite
+    path('leoxur-comm/', views.leoxur_comm_dashboard, name='leoxur_comm_dashboard'),
+    path('leoxur-comm/auth/', views.leoxur_comm_auth, name='leoxur_comm_auth'),
+    path('leoxur-comm/logout/', views.leoxur_comm_logout, name='leoxur_comm_logout'),
+    path('leoxur-comm/data/', views.leoxur_comm_data, name='leoxur_comm_data'),
+    path('leoxur-comm/send-email/', views.leoxur_send_email, name='leoxur_send_email'),
+    path('leoxur-comm/send-chat/', views.leoxur_send_chat, name='leoxur_send_chat'),
+    path('leoxur-comm/read-email/', views.leoxur_read_email, name='leoxur_read_email'),
+    path('leoxur-comm/create-task/', views.leoxur_create_task, name='leoxur_create_task'),
+    path('leoxur-comm/update-task/', views.leoxur_update_task, name='leoxur_update_task'),
+    path('leoxur-comm/delete-task/', views.leoxur_delete_task, name='leoxur_delete_task'),
+    path('leoxur-comm/add-task-comment/', views.leoxur_create_task_comment, name='leoxur_create_task_comment'),
 ]

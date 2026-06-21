@@ -5,7 +5,7 @@
 {% block portal_content %}
 <div class="snow-page-header">
     <h1>Incidents</h1>
-    <a href="{% url 'support_home' %}" class="snow-btn snow-btn-secondary">➕ New Ticket (Client View)</a>
+    <a href="{% url 'support_home' %}" class="snow-btn snow-btn-secondary">New Ticket (Client View)</a>
 </div>
 
 <!-- Dashboard Metrics Panel -->
@@ -13,7 +13,7 @@
     <!-- Engineer Workloads Card -->
     <div class="snow-form-card" style="margin-bottom: 0; padding: 1.25rem;">
         <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
-            📊 Support Engineer Ticket Workloads
+            Support Engineer Ticket Workloads
         </h3>
         <table class="snow-table" style="font-size: 0.8rem; width: 100%;">
             <thead>
@@ -46,21 +46,21 @@
     <!-- Quick SLA Counters Card -->
     <div class="snow-form-card" style="margin-bottom: 0; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
         <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
-            ⏱️ Active SLA Statuses
+            Active SLA Statuses
         </h3>
         <div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1; justify-content: center;">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background-color: #fee2e2; border-left: 4px solid #ef4444; border-radius: 4px;">
-                <span style="font-weight: bold; color: #991b1b; font-size: 0.85rem;">🚨 Breached SLAs</span>
+                <span style="font-weight: bold; color: #991b1b; font-size: 0.85rem;">Breached SLAs</span>
                 <span style="font-weight: 800; font-size: 1.2rem; color: #991b1b;">{{ sla_breached_count }}</span>
             </div>
             
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
-                <span style="font-weight: bold; color: #1e40af; font-size: 0.85rem;">⏳ Active SLAs</span>
+                <span style="font-weight: bold; color: #1e40af; font-size: 0.85rem;">Active SLAs</span>
                 <span style="font-weight: 800; font-size: 1.2rem; color: #1e40af;">{{ active_sla_count }}</span>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background-color: #fef3c7; border-left: 4px solid #d97706; border-radius: 4px;">
-                <span style="font-weight: bold; color: #92400e; font-size: 0.85rem;">📥 Unassigned Tickets</span>
+                <span style="font-weight: bold; color: #92400e; font-size: 0.85rem;">Unassigned Tickets</span>
                 <span style="font-weight: 800; font-size: 1.2rem; color: #92400e;">{{ unassigned_count }}</span>
             </div>
         </div>
@@ -169,7 +169,6 @@
         </table>
     {% else %}
         <div style="padding: 3rem; text-align: center; color: var(--snow-secondary-text);">
-            <span style="font-size: 2.5rem; display: block; margin-bottom: 1rem;">📭</span>
             <h3>No incidents match your current filter parameters.</h3>
             <p>Try resetting the filters or submit a new ticket from the support desk.</p>
         </div>

@@ -11,11 +11,11 @@
 <div class="grid-header">
     <div class="school-logo-bubble">
         <h1>Leoxur Solutions Limited</h1>
-        <p>Employee Time & Expense Portal 💼</p>
+        <p>Employee Time & Expense Portal</p>
     </div>
 
     <a href="{% url 'teacher_dashboard' %}" class="bubbly-btn secondary-btn admin-badge-btn">
-        💼 Manager Portal
+        Manager Portal
     </a>
 </div>
 {% elif block.block_id == 'classroom_tabs' %}
@@ -32,11 +32,9 @@
 <!-- Interactive Stats Banner -->
 <div class="stats-cloud-banner">
     <div class="stat-pill">
-        <span class="stat-pill-icon">👥</span>
         <span class="stat-pill-text"><strong>{{ total_students }}</strong> Employees registered</span>
     </div>
     <div class="stat-pill">
-        <span class="stat-pill-icon">☀️</span>
         <span class="stat-pill-text"><strong>{{ present_today }}</strong> On shift today</span>
     </div>
     <div class="stat-pill progress-pill">
@@ -55,22 +53,16 @@
 
         <!-- Profile Avatar Wrapper -->
         <div class="kid-avatar-wrapper">
-            <span class="kid-emoji">{{ employee.avatar_emoji }}</span>
-            <div class="status-indicator-badge">
+            <span class="kid-emoji">{{ employee.initials }}</span>
+            <div class="status-indicator-badge" style="font-size: 0.65rem; font-weight: 800; width: auto; min-width: 28px; padding: 0 6px; border-radius: 9999px;">
                 {% if employee.today_status %}
                     {% if employee.today_status.checked_out_at %}
-                        ✅
-                    {% elif employee.today_status.work_mode == 'office' %}
-                        🏢
-                    {% elif employee.today_status.work_mode == 'remote' %}
-                        🏠
-                    {% elif employee.today_status.work_mode == 'field' %}
-                        🚗
+                        Out
                     {% else %}
-                        ☀️
+                        In
                     {% endif %}
                 {% else %}
-                    🌙
+                    Out
                 {% endif %}
             </div>
         </div>
@@ -96,11 +88,11 @@
     </div>
     {% empty %}
     <div class="empty-classroom-card">
-        <h2>No Employees registered 👔</h2>
+        <h2>No Employees registered</h2>
         <p>There are no active employees assigned to the <strong>{{ selected_classroom }}</strong> department yet.</p>
         <a href="{% url 'add_student' %}" class="bubbly-btn primary-btn"
             style="margin-top: 1rem; display: inline-block;">
-            ➕ Add an Employee
+            Add an Employee
         </a>
     </div>
     {% endfor %}
@@ -116,7 +108,7 @@
         <div id="pin-screen-container">
             <div class="modal-header-section">
                 <h2 id="pin-modal-welcome-text">Hi User!</h2>
-                <p>Enter your 4-digit PIN! 🔑</p>
+                <p>Enter your 4-digit PIN</p>
             </div>
 
             <!-- Visual Dots for PIN Code digits -->
@@ -128,7 +120,7 @@
             </div>
 
             <!-- Error message bubble (initially hidden) -->
-            <div class="pin-error-message" id="pin-error-msg">Wrong PIN, try again! 🤫</div>
+            <div class="pin-error-message" id="pin-error-msg">Wrong PIN, try again!</div>
 
             <!-- Custom Keypad -->
             <div class="pin-keypad-grid">
@@ -161,15 +153,12 @@
             <!-- Work Mode Choices -->
             <div class="mood-selection-grid">
                 <button class="mood-option-btn selected" data-mood="office">
-                    <span class="mood-emoji">🏢</span>
                     <span class="mood-label">Office</span>
                 </button>
                 <button class="mood-option-btn" data-mood="remote">
-                    <span class="mood-emoji">🏠</span>
                     <span class="mood-label">Remote</span>
                 </button>
                 <button class="mood-option-btn" data-mood="field">
-                    <span class="mood-emoji">🚗</span>
                     <span class="mood-label">Field</span>
                 </button>
             </div>
@@ -178,7 +167,7 @@
             <div class="modal-actions-wrapper">
                 <button class="bubbly-btn cancel-btn" id="modal-close-btn">Close</button>
                 <button class="bubbly-btn primary-btn submit-checkin-btn" id="modal-submit-btn" data-action="check_in">
-                    📥 Check In
+                    Check In
                 </button>
             </div>
         </div>

@@ -10,22 +10,40 @@
         <p style="color: var(--text-muted); font-size: 1.1rem; font-weight: 500;">Select a portal below to manage your workday shifts and schedules</p>
     </div>
 
-    <div style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; max-width: 800px; margin-top: 1rem;">
+    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; max-width: 1200px; margin-top: 1rem;">
         <!-- Employee Kiosk Route -->
         <a href="{% url 'student_grid' %}" style="text-decoration: none;">
-            <div class="kid-card" style="width: 280px; text-align: center; cursor: pointer; --kid-color: var(--success-color); border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem 1.5rem; background-color: var(--card-bg); height: 100%;">
-                <div class="kid-avatar-wrapper" style="background-color: var(--success-light); margin: 0 auto 1.25rem auto; width: 88px; height: 88px; font-size: 2.8rem; display: flex; align-items: center; justify-content: center; border-radius: 50%;">🏢</div>
-                <h2 style="margin: 0; color: var(--text-main); font-weight: 850; font-size: 1.35rem;">Employee Time & Expense</h2>
+            <div class="kid-card" style="width: 260px; text-align: center; cursor: pointer; --kid-color: var(--success-color); border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem 1.25rem; background-color: var(--card-bg); height: 100%;">
+                <div class="kid-avatar-wrapper" style="background-color: var(--success-light); margin: 0 auto 1.25rem auto; width: 88px; height: 88px; font-size: 1.8rem; font-weight:800; color: var(--success-color); display: flex; align-items: center; justify-content: center; border-radius: 50%;">TC</div>
+                <h2 style="margin: 0; color: var(--text-main); font-weight: 850; font-size: 1.35rem;">Employee Timeclock</h2>
                 <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem; font-weight: 600; line-height: 1.5;">Check in or check out of your daily rostered shift via PIN.</p>
             </div>
         </a>
 
         <!-- Manager Dashboard Route -->
         <a href="{% url 'teacher_dashboard' %}" style="text-decoration: none;">
-            <div class="kid-card" style="width: 280px; text-align: center; cursor: pointer; --kid-color: var(--primary-color); border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem 1.5rem; background-color: var(--card-bg); height: 100%;">
-                <div class="kid-avatar-wrapper" style="background-color: var(--primary-light); margin: 0 auto 1.25rem auto; width: 88px; height: 88px; font-size: 2.8rem; display: flex; align-items: center; justify-content: center; border-radius: 50%;">💼</div>
+            <div class="kid-card" style="width: 260px; text-align: center; cursor: pointer; --kid-color: var(--primary-color); border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem 1.25rem; background-color: var(--card-bg); height: 100%;">
+                <div class="kid-avatar-wrapper" style="background-color: var(--primary-light); margin: 0 auto 1.25rem auto; width: 88px; height: 88px; font-size: 1.8rem; font-weight:800; color: var(--primary-color); display: flex; align-items: center; justify-content: center; border-radius: 50%;">MP</div>
                 <h2 style="margin: 0; color: var(--text-main); font-weight: 850; font-size: 1.35rem;">Manager Portal</h2>
                 <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem; font-weight: 600; line-height: 1.5;">Monitor employee hours, assign schedules, and view statistics.</p>
+            </div>
+        </a>
+
+        <!-- Leoxur Workspace Mails & Chat -->
+        <a href="/leoxur-comm/" style="text-decoration: none;">
+            <div class="kid-card" style="width: 260px; text-align: center; cursor: pointer; --kid-color: #EC4899; border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem 1.25rem; background-color: var(--card-bg); height: 100%;">
+                <div class="kid-avatar-wrapper" style="background-color: rgba(236, 72, 153, 0.1); margin: 0 auto 1.25rem auto; width: 88px; height: 88px; font-size: 1.8rem; font-weight:800; color: #EC4899; display: flex; align-items: center; justify-content: center; border-radius: 50%;">LW</div>
+                <h2 style="margin: 0; color: var(--text-main); font-weight: 850; font-size: 1.35rem;">Leoxur Workspace</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem; font-weight: 600; line-height: 1.5;">Access internal emails, read news, and chat with team colleagues.</p>
+            </div>
+        </a>
+
+        <!-- IT Desk Support -->
+        <a href="{% url 'support_home' %}" style="text-decoration: none;">
+            <div class="kid-card" style="width: 260px; text-align: center; cursor: pointer; --kid-color: #F59E0B; border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem 1.25rem; background-color: var(--card-bg); height: 100%;">
+                <div class="kid-avatar-wrapper" style="background-color: rgba(245, 158, 11, 0.1); margin: 0 auto 1.25rem auto; width: 88px; height: 88px; font-size: 1.8rem; font-weight:800; color: #F59E0B; display: flex; align-items: center; justify-content: center; border-radius: 50%;">SD</div>
+                <h2 style="margin: 0; color: var(--text-main); font-weight: 850; font-size: 1.35rem;">IT Support Desk</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem; font-weight: 600; line-height: 1.5;">Submit support requests, track SLA progress, and contact engineering.</p>
             </div>
         </a>
     </div>

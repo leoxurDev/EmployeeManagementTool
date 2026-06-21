@@ -1,5 +1,19 @@
 // Employee Shift Hub - Kiosk & Dashboard Controls
 
+// Helper to extract initials from name
+function getInitials(name) {
+    if (!name) return '?';
+    let clean = name.replace(/\([^)]*\)/g, '').trim();
+    let parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0]) {
+        return parts[0].substring(0, 2).toUpperCase();
+    }
+    return '?';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Canvas setup for Star/Circle particles
     initConfetti();
@@ -68,8 +82,8 @@ function initEmployeeGrid() {
             const empName = card.getAttribute('data-name');
             currentSelectedEmployeeId = card.getAttribute('data-id');
             
-            if (pinWelcomeText) pinWelcomeText.textContent = `Hi, ${empName}! 👋`;
-            if (welcomeText) welcomeText.textContent = `Hi, ${empName}! 👋`;
+            if (pinWelcomeText) pinWelcomeText.textContent = `Welcome, ${empName}`;
+            if (welcomeText) welcomeText.textContent = `Welcome, ${empName}`;
             
             // Set default work mode styling
             workModeButtons.forEach(btn => btn.classList.remove('selected'));
@@ -145,7 +159,7 @@ function initEmployeeGrid() {
                     welcomeSub.innerHTML = `Scheduled Roster: <strong>${data.rostered_shift}</strong><br>Select your Work Mode to Check In:`;
                     if (modeSelectGrid) modeSelectGrid.style.display = 'grid';
                     if (submitBtn) {
-                        submitBtn.textContent = '📥 Check In';
+                        submitBtn.textContent = 'Check In';
                         submitBtn.setAttribute('data-action', 'check_in');
                         submitBtn.style.display = 'inline-flex';
                     }
@@ -153,12 +167,12 @@ function initEmployeeGrid() {
                     welcomeSub.innerHTML = `You checked in at <strong>${data.check_in_time}</strong>.<br>Ready to complete your shift?`;
                     if (modeSelectGrid) modeSelectGrid.style.display = 'none';
                     if (submitBtn) {
-                        submitBtn.textContent = '📤 Check Out';
+                        submitBtn.textContent = 'Check Out';
                         submitBtn.setAttribute('data-action', 'check_out');
                         submitBtn.style.display = 'inline-flex';
                     }
                 } else {
-                    welcomeSub.innerHTML = `Shift Completed! 🎉<br>Check-in: ${data.check_in_time}<br>Check-out: ${data.check_out_time}<br>Total Hours Worked: <strong>${data.hours_worked} hrs</strong>`;
+                    welcomeSub.innerHTML = `Shift Completed!<br>Check-in: ${data.check_in_time}<br>Check-out: ${data.check_out_time}<br>Total Hours Worked: <strong>${data.hours_worked} hrs</strong>`;
                     if (modeSelectGrid) modeSelectGrid.style.display = 'none';
                     if (submitBtn) {
                         submitBtn.style.display = 'none'; // Only Close is needed
@@ -168,7 +182,7 @@ function initEmployeeGrid() {
                 if (pinScreen) {
                     pinScreen.classList.add('shake');
                     if (pinErrorMsg) {
-                        pinErrorMsg.textContent = data.error || 'Wrong PIN! 🤫';
+                        pinErrorMsg.textContent = data.error || 'Wrong PIN!';
                         pinErrorMsg.classList.add('show');
                     }
                     setTimeout(() => {
@@ -234,7 +248,7 @@ function initEmployeeGrid() {
                     if (action === 'check_out') {
                         card.classList.add('checked-in'); // Keep styled as completed
                         card.classList.remove('checked-in-late');
-                        card.querySelector('.status-indicator-badge').textContent = '✅';
+                        card.querySelector('.status-indicator-badge').textContent = 'Checked Out';
                         card.querySelector('.kid-status-text').innerHTML = `
                             Completed Shift <br>
                             Out: ${data.time} (Hours: ${data.hours_worked})
@@ -246,12 +260,11 @@ function initEmployeeGrid() {
                             card.classList.add('checked-in');
                         }
                         
-                        const modeEmoji = data.mood_emoji || '🏢';
-                        card.querySelector('.status-indicator-badge').textContent = modeEmoji;
+                        card.querySelector('.status-indicator-badge').textContent = 'Checked In';
                         const lateLabel = data.status === 'late' ? ' (Late)' : '';
                         card.querySelector('.kid-status-text').innerHTML = `
                             In${lateLabel} at ${data.time} <br>
-                            Mode: ${modeEmoji} ${data.mood.charAt(0).toUpperCase() + data.mood.slice(1)}
+                            Mode: ${data.mood.charAt(0).toUpperCase() + data.mood.slice(1)}
                         `;
                         
                         // Burst particles celebrating check-in
@@ -404,11 +417,11 @@ function initManagerDashboard() {
                     if (hiddenDigits.style.display === 'none') {
                         hiddenDigits.style.display = 'inline';
                         shownDigits.style.display = 'none';
-                        btn.textContent = '👁️';
+                        btn.textContent = 'Show';
                     } else {
                         hiddenDigits.style.display = 'none';
                         shownDigits.style.display = 'inline';
-                        btn.textContent = '🙈';
+                        btn.textContent = 'Hide';
                     }
                 }
             }
@@ -679,24 +692,24 @@ function initUnifiedLogin() {
                 const selectTitle = document.querySelector('#student-mood-container .modal-header-section p');
                 
                 if (data.state === 'not_checked_in') {
-                    if (moodWelcomeText) moodWelcomeText.textContent = `Hi, ${selectedEmployeeName}! 👋`;
+                    if (moodWelcomeText) moodWelcomeText.textContent = `Welcome, ${selectedEmployeeName}`;
                     if (selectTitle) selectTitle.innerHTML = `Scheduled: <strong>${data.rostered_shift}</strong><br>Select your Work Mode to Check In:`;
                     workModeButtons.forEach(b => b.classList.remove('selected'));
                     const defaultModeBtn = document.querySelector('#student-mood-container .mood-option-btn[data-mood="office"]');
                     if (defaultModeBtn) defaultModeBtn.classList.add('selected');
                     selectedWorkMode = 'office';
                     if (submitBtn) {
-                        submitBtn.textContent = '📥 Check In';
+                        submitBtn.textContent = 'Check In';
                         submitBtn.setAttribute('data-action', 'check_in');
                     }
                     if (moodContainer) moodContainer.style.display = 'block';
                 } else if (data.state === 'checked_in') {
-                    if (moodWelcomeText) moodWelcomeText.textContent = `Hi, ${selectedEmployeeName}! 👋`;
+                    if (moodWelcomeText) moodWelcomeText.textContent = `Welcome, ${selectedEmployeeName}`;
                     if (selectTitle) selectTitle.innerHTML = `You checked in at <strong>${data.check_in_time}</strong>.<br>Ready to check out and log hours?`;
                     const modeSelectGrid = document.querySelector('#student-mood-container .mood-selection-grid');
                     if (modeSelectGrid) modeSelectGrid.style.display = 'none';
                     if (submitBtn) {
-                        submitBtn.textContent = '📤 Check Out';
+                        submitBtn.textContent = 'Check Out';
                         submitBtn.setAttribute('data-action', 'check_out');
                     }
                     if (moodContainer) moodContainer.style.display = 'block';
@@ -708,13 +721,13 @@ function initUnifiedLogin() {
                     
                     const successCircle = document.getElementById('student-success-avatar-circle');
                     if (successCircle) {
-                        successCircle.textContent = selectedEmployeeEmoji;
+                        successCircle.textContent = getInitials(selectedEmployeeName);
                         successCircle.style.backgroundColor = selectedEmployeeColor;
                     }
                     
                     const successMsg = document.getElementById('student-success-msg');
                     if (successMsg) {
-                        successMsg.innerHTML = `<strong>${selectedEmployeeName}</strong> is already checked out for today! ✅<br>Total Hours Worked: <strong>${data.hours_worked} hrs</strong>`;
+                        successMsg.innerHTML = `<strong>${selectedEmployeeName}</strong> is already checked out for today!<br>Total Hours Worked: <strong>${data.hours_worked} hrs</strong>`;
                     }
                     
                     if (successContainer) successContainer.style.display = 'block';
@@ -723,7 +736,7 @@ function initUnifiedLogin() {
                 if (keypadContainer) {
                     keypadContainer.classList.add('shake');
                     if (pinErrorMsg) {
-                        pinErrorMsg.textContent = data.error || 'Wrong PIN! 🤫';
+                        pinErrorMsg.textContent = data.error || 'Wrong PIN!';
                         pinErrorMsg.classList.add('show');
                     }
                     setTimeout(() => {
@@ -771,7 +784,7 @@ function initUnifiedLogin() {
                 
                 const successCircle = document.getElementById('student-success-avatar-circle');
                 if (successCircle) {
-                    successCircle.textContent = selectedEmployeeEmoji;
+                    successCircle.textContent = getInitials(selectedEmployeeName);
                     successCircle.style.backgroundColor = selectedEmployeeColor;
                 }
                 
@@ -779,9 +792,9 @@ function initUnifiedLogin() {
                 if (successMsg) {
                     if (action === 'check_in') {
                         const lateLabel = data.status === 'late' ? ' (Late)' : '';
-                        successMsg.innerHTML = `<strong>${selectedEmployeeName}</strong> is checked in${lateLabel} at ${data.time}! ✅<br>Work Mode: ${data.mood_emoji} ${selectedWorkMode.charAt(0).toUpperCase() + selectedWorkMode.slice(1)}`;
+                        successMsg.innerHTML = `<strong>${selectedEmployeeName}</strong> is checked in${lateLabel} at ${data.time}!<br>Work Mode: ${selectedWorkMode.charAt(0).toUpperCase() + selectedWorkMode.slice(1)}`;
                     } else {
-                        successMsg.innerHTML = `<strong>${selectedEmployeeName}</strong> is checked out at ${data.time}! ✅<br>Shift Completed! Total Hours Worked: <strong>${data.hours_worked} hrs</strong>`;
+                        successMsg.innerHTML = `<strong>${selectedEmployeeName}</strong> is checked out at ${data.time}!<br>Shift Completed! Total Hours Worked: <strong>${data.hours_worked} hrs</strong>`;
                     }
                 }
 
@@ -981,7 +994,7 @@ function initDeveloperPage() {
             if (chatMessages && chatMessages.contains(typingBubble)) {
                 chatMessages.removeChild(typingBubble);
             }
-            appendMessageBubble("Oops! Something went wrong connecting to my AI processor. Check your connection or API key! 🔌", false);
+            appendMessageBubble("Oops! Something went wrong connecting to my AI processor. Check your connection or API key!", false);
             console.error("AI chat communication error:", err);
         });
     }

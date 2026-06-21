@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Employee, Roster, Attendance, DepartmentOption, AvatarEmoji, AvatarColor,
-    AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission
+    AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission,
+    LeoxurEmail, LeoxurMessage, LeoxurTask
 )
 
 
@@ -82,3 +83,25 @@ class TicketActivityAdmin(admin.ModelAdmin):
     list_display = ('ticket', 'activity_type', 'author', 'created_at')
     list_filter = ('activity_type', 'created_at')
     search_fields = ('ticket__number', 'author', 'content')
+
+
+@admin.register(LeoxurEmail)
+class LeoxurEmailAdmin(admin.ModelAdmin):
+    list_display = ('sender_id', 'receiver_id', 'subject', 'created_at', 'is_read')
+    list_filter = ('created_at', 'is_read')
+    search_fields = ('sender_id', 'receiver_id', 'subject', 'body')
+
+
+@admin.register(LeoxurMessage)
+class LeoxurMessageAdmin(admin.ModelAdmin):
+    list_display = ('sender_id', 'room_id', 'created_at', 'message_type')
+    list_filter = ('room_id', 'created_at', 'message_type')
+    search_fields = ('sender_id', 'content')
+
+
+@admin.register(LeoxurTask)
+class LeoxurTaskAdmin(admin.ModelAdmin):
+    list_display = ('title', 'status', 'priority', 'creator_id', 'assignee_id', 'created_at')
+    list_filter = ('status', 'priority', 'created_at')
+    search_fields = ('title', 'description', 'creator_id', 'assignee_id')
+

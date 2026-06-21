@@ -7,8 +7,8 @@
 <div class="login-card">
     <div class="login-tab-container">
         <div class="login-tab-slider"></div>
-        <button id="tab-student" class="login-tab-btn active">🏢 Employee Time & Expense</button>
-        <button id="tab-teacher" class="login-tab-btn">💼 Manager Login</button>
+        <button id="tab-student" class="login-tab-btn active">Employee Time & Expense</button>
+        <button id="tab-teacher" class="login-tab-btn">Manager Login</button>
     </div>
 
     <!-- SECTION 1: EMPLOYEE PIN CHECK-IN -->
@@ -34,7 +34,7 @@
         <!-- Secure Keypad (Initially Hidden) -->
         <div id="student-keypad-container" style="display: none;">
             <div class="modal-header-section">
-                <p>Enter your 4-digit PIN! 🔑</p>
+                <p>Enter your 4-digit PIN</p>
             </div>
             
             <div class="pin-dots-container">
@@ -44,7 +44,7 @@
                 <div class="pin-dot"></div>
             </div>
 
-            <div class="pin-error-message" id="student-pin-error-msg">Wrong PIN! 🤫</div>
+            <div class="pin-error-message" id="student-pin-error-msg">Wrong PIN!</div>
 
             <div class="pin-keypad-grid">
                 <button class="keypad-btn student-key" data-val="1">1</button>
@@ -75,15 +75,12 @@
 
             <div class="mood-selection-grid">
                 <button class="mood-option-btn selected" data-mood="office">
-                    <span class="mood-emoji">🏢</span>
                     <span class="mood-label">Office</span>
                 </button>
                 <button class="mood-option-btn" data-mood="remote">
-                    <span class="mood-emoji">🏠</span>
                     <span class="mood-label">Remote</span>
                 </button>
                 <button class="mood-option-btn" data-mood="field">
-                    <span class="mood-emoji">🚗</span>
                     <span class="mood-label">Field</span>
                 </button>
             </div>
@@ -91,15 +88,14 @@
             <div class="modal-actions-wrapper">
                 <button class="bubbly-btn cancel-btn" id="student-reset-btn">Cancel</button>
                 <button class="bubbly-btn primary-btn" id="student-submit-checkin" data-action="check_in">
-                    📥 Check In
+                    Check In
                 </button>
             </div>
         </div>
 
         <!-- Success Details Screen (Initially Hidden) -->
         <div id="student-success-container" style="display: none; text-align: center; padding: 1rem 0;">
-            <div id="student-success-avatar-circle" class="kid-avatar-wrapper" style="width: 90px; height: 90px; font-size: 2.8rem; margin: 0 auto 1.5rem auto;">
-                💼
+            <div id="student-success-avatar-circle" class="kid-avatar-wrapper" style="width: 90px; height: 90px; font-size: 1.5rem; font-weight: 800; margin: 0 auto 1.5rem auto; display: flex; align-items: center; justify-content: center;">
             </div>
             <h2 style="font-weight: 850; margin-bottom: 0.5rem;">Shift Registered!</h2>
             <p id="student-success-msg" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; font-weight: 600; margin-bottom: 1.75rem;">
@@ -145,17 +141,15 @@
             </div>
 
             <button type="submit" class="bubbly-btn primary-btn" style="width: 100%; padding: 0.8rem 0;">
-                {% if action == 'login' %}💼 Sign In{% else %}📝 Register{% endif %}
+                {% if action == 'login' %}Sign In{% else %}Register{% endif %}
             </button>
         </form>
 
+        {% if action == 'register' %}
         <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">
-            {% if action == 'login' %}
-            Need a manager account? <a href="{% url 'teacher_register' %}" style="color: var(--primary-color); text-decoration: none;">Register here</a>
-            {% else %}
-            Already have an account? <a href="{% url 'teacher_login' %}" style="color: var(--primary-color); text-decoration: none;">Login here</a>
-            {% endif %}
+            Want to go back? <a href="{% url 'teacher_login' %}" style="color: var(--primary-color); text-decoration: none;">Login here</a>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

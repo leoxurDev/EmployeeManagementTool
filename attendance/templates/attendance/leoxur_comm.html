@@ -1,0 +1,1725 @@
+{% extends 'attendance/base.html' %}
+{% load static %}
+
+{% block title %}Leoxur Workspace | Enterprise Hub{% endblock %}
+
+{% block content %}
+<!-- Communication Stylesheet -->
+<link rel="stylesheet" href="{% static 'css/leoxur_comm.css' %}?v={% now 'U' %}">
+
+<div class="comm-outer-container">
+    
+    <!-- 1. IDENTITY LOGIN GATE (Visible when not authenticated in session) -->
+    <div id="comm-auth-gate-section" class="comm-auth-gate" style="{% if active_user_id %}display: none;{% else %}display: block;{% endif %}">
+        <h2 class="comm-auth-title">Leoxur Workspace</h2>
+        <p class="comm-auth-desc">Select your role and profile to access the communications hub</p>
+
+        <div id="comm-auth-form-container">
+            <!-- Role Selection Grid -->
+            <div class="comm-role-grid">
+                <div class="comm-role-card active" data-role="Manager" onclick="selectRole('Manager')">
+                    <span class="comm-role-emoji">💼</span>
+                    <span class="comm-role-label">Manager</span>
+                </div>
+                <div class="comm-role-card" data-role="Employee" onclick="selectRole('Employee')">
+                    <span class="comm-role-emoji">👤</span>
+                    <span class="comm-role-label">Employee</span>
+                </div>
+                <div class="comm-role-card" data-role="Support Engineer" onclick="selectRole('Support Engineer')">
+                    <span class="comm-role-emoji">🛠️</span>
+                    <span class="comm-role-label">Engineer</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label id="comm-user-label" for="comm-user-select">Select Manager Profile</label>
+                <select id="comm-user-select" class="form-select">
+                    <!-- Populated dynamically via JS -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label id="comm-secret-label" for="comm-auth-secret">Password</label>
+                <input type="password" id="comm-auth-secret" class="form-input" placeholder="Enter password" maxlength="50">
+            </div>
+
+            <div class="pin-error-message" id="comm-auth-error-msg" style="margin-bottom: 1.25rem;">Wrong password. Please try again!</div>
+
+            <button id="comm-auth-submit-btn" class="bubbly-btn primary-btn" style="width:100%; padding:0.8rem 0;" onclick="authenticateCommUser()">
+                Connect Workspace
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. MAIN COMMUNICATION DASHBOARD (Visible when active_user_id exists) -->
+    <div id="comm-dashboard-layout-section" class="comm-dashboard-layout" style="{% if active_user_id %}display: grid;{% else %}display: none;{% endif %}">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="comm-sidebar">
+            <div class="comm-sidebar-brand">
+                <h2>Leoxur Workspace</h2>
+            </div>
+
+            <!-- Active User Profile Card -->
+            <div class="comm-user-profile">
+                <div id="active-user-avatar" class="comm-user-avatar" style="--avatar-color: {{ active_user.avatar_color|default:'#4F46E5' }}">
+                    {{ active_user.avatar_emoji|default:'👤' }}
+                </div>
+                <div class="comm-user-info">
+                    <div id="active-user-name" class="comm-user-name">{{ active_user.name|default:'Unauthenticated' }}</div>
+                    <div id="active-user-role" class="comm-user-role">{{ active_user.role|default:'Guest' }}</div>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="comm-nav-list">
+                <button class="comm-nav-item active" onclick="switchCommTab('mails')" style="position: relative; display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <span>Leoxur Mails</span>
+                    <span id="mail-unread-badge" style="
+                        background-color: var(--comm-danger);
+                        color: white;
+                        font-size: 0.75rem;
+                        font-weight: 800;
+                        padding: 0.15rem 0.45rem;
+                        border-radius: 9999px;
+                        display: none;
+                    ">0</span>
+                </button>
+                <button class="comm-nav-item" onclick="switchCommTab('chat')">
+                    Leoxur Chat
+                </button>
+                <button class="comm-nav-item" onclick="switchCommTab('tasks')">
+                    Tasks Board
+                </button>
+                
+                <!-- Logout / Switch Identity -->
+                <button class="comm-nav-item comm-logout-btn" onclick="logoutCommUser()">
+                    Switch Profile
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Right Content Panels -->
+        <main class="comm-main-panel">
+
+            <!-- TAB A: LEOXUR MAILS (Outlook Clone) -->
+            <div id="comm-tab-mails" class="comm-tab-content active">
+                <div class="mail-layout">
+                    <!-- Left Sidebar (Email folders & inbox list) -->
+                    <div class="mail-sidebar">
+                        <div class="mail-sidebar-header">
+                            <button class="mail-compose-btn" onclick="openComposeModal()">
+                                Compose New Mail
+                            </button>
+                            <div class="mail-folder-tabs">
+                                <button id="mail-folder-inbox" class="mail-folder-btn active" onclick="setMailFolder('inbox')">
+                                    Inbox
+                                </button>
+                                <button id="mail-folder-sent" class="mail-folder-btn" onclick="setMailFolder('sent')">
+                                    Sent
+                                </button>
+                            </div>
+                        </div>
+                        <div id="mail-inbox-list" class="mail-list">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right pane (Email detail view) -->
+                    <div class="mail-content-pane">
+                        <div id="mail-view-empty" class="mail-no-selection">
+                            <h3>No Email Selected</h3>
+                            <p>Choose an email from the folder list to read its content</p>
+                        </div>
+                        <div id="mail-view-details" style="display: none; height: 100%;" class="comm-tab-content active">
+                            <div class="mail-detail-header">
+                                <h2 id="mail-view-subject" class="mail-detail-subject">Meeting Schedule Notice</h2>
+                                <div class="mail-detail-meta">
+                                    <div id="mail-view-sender-avatar" class="comm-user-avatar" style="width:36px; height:36px; font-size:1.1rem;">👤</div>
+                                    <div>
+                                        <div id="mail-view-sender-name" style="font-weight: 800; font-size: 0.85rem;">Sender Name</div>
+                                        <div id="mail-view-receiver-name" style="color: var(--comm-text-muted); font-size: 0.75rem; font-weight: 600;">to Receiver</div>
+                                    </div>
+                                    <div id="mail-view-date" class="mail-item-date" style="margin-left: auto;">June 21, 2026</div>
+                                </div>
+                            </div>
+                            <div id="mail-view-body" class="mail-detail-body">
+                                Email contents...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB B: LEOXUR CHAT (Teams Chat Clone) -->
+            <div id="comm-tab-chat" class="comm-tab-content">
+                <div class="chat-layout">
+                    <!-- Left Sidebar (Rooms and Direct Chats list) -->
+                    <div class="chat-rooms-sidebar">
+                        <div class="chat-section-title">Channels</div>
+                        <button class="chat-room-item active" onclick="setChatRoom('general')">
+                            #general
+                        </button>
+                        <button class="chat-room-item" onclick="setChatRoom('support')">
+                            #support
+                        </button>
+                        <button class="chat-room-item" id="chat-channel-managers" onclick="setChatRoom('managers')">
+                            #managers
+                        </button>
+
+                        <div class="chat-section-title">Direct Messages</div>
+                        <div id="chat-dm-list">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right pane (Chat stream and input) -->
+                    <div class="chat-pane">
+                        <div class="chat-header">
+                            <div>
+                                <h3 id="chat-current-title" class="chat-header-title">#general</h3>
+                                <p id="chat-current-desc" style="font-size:0.75rem; color:var(--comm-text-muted); font-weight: 600; margin:0;">
+                                    Public channel accessible by all employees, managers, and support engineers.
+                                </p>
+                            </div>
+                        </div>
+                        <div id="chat-messages-container" class="chat-messages">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                        <!-- Reply Context Area -->
+                        <div id="chat-reply-context-container" style="
+                            display: none;
+                            background: var(--comm-bg-main);
+                            border-top: 1px solid var(--comm-border);
+                            padding: 0.5rem 1.5rem;
+                            align-items: center;
+                            justify-content: space-between;
+                            font-size: 0.8rem;
+                        ">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 0.8rem; font-weight:700; color:var(--comm-primary);">Replying:</span>
+                                <div>
+                                    <span>Replying to <strong id="chat-reply-context-sender">John</strong></span>
+                                    <div id="chat-reply-context-snippet" style="color: var(--comm-text-muted); font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px;">"Hello there"</div>
+                                </div>
+                            </div>
+                            <button style="background:none; border:none; font-size:1.25rem; cursor:pointer; color:var(--comm-text-muted); font-weight:bold; line-height:1;" onclick="cancelChatReply()">&times;</button>
+                        </div>
+
+                        <div class="chat-input-area">
+                            <input type="text" id="chat-message-input" class="chat-input-field" placeholder="Type a message to general..." onkeydown="handleChatInputKey(event)">
+                            <button class="bubbly-btn primary-btn" style="padding: 0.75rem 1.5rem;" onclick="sendChatMessage()">
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB C: LEOXUR TASKS (Jira-like Kanban Board) -->
+            <div id="comm-tab-tasks" class="comm-tab-content">
+                <div class="tasks-layout">
+                    <!-- Tasks Header -->
+                    <div class="tasks-header">
+                        <div class="tasks-header-info">
+                            <h2 class="tasks-title">Leoxur Tasks Board</h2>
+                            <p class="tasks-desc">Track and generate Jira-like issues for managers, employees, and engineers.</p>
+                        </div>
+                        <button class="bubbly-btn primary-btn tasks-create-btn" onclick="openCreateTaskModal()">
+                            Create Issue
+                        </button>
+                    </div>
+
+                    <!-- Controls Bar (View & Filters) -->
+                    <div class="tasks-controls-bar">
+                        <!-- View Toggles -->
+                        <div class="tasks-view-toggles">
+                            <button id="btn-view-kanban" class="tasks-control-btn active" onclick="setTasksView('kanban')">
+                                Kanban Board
+                            </button>
+                            <button id="btn-view-list" class="tasks-control-btn" onclick="setTasksView('list')">
+                                List View
+                            </button>
+                        </div>
+                        <!-- Filter Toggles -->
+                        <div class="tasks-filter-toggles">
+                            <button id="btn-filter-all" class="tasks-control-btn active" onclick="setTasksFilter('all')">
+                                All Issues
+                            </button>
+                            <button id="btn-filter-mine" class="tasks-control-btn" onclick="setTasksFilter('mine')">
+                                Assigned to Me
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Kanban Grid -->
+                    <div class="tasks-kanban-board" id="tasks-kanban-board-container">
+                        <!-- Backlog Column -->
+                        <div class="kanban-column" id="col-backlog" ondragover="allowTaskDrop(event)" ondragleave="handleTaskDragLeave(event)" ondrop="dropTask(event, 'backlog')">
+                            <div class="kanban-column-header">
+                                <span class="kanban-column-title">Backlog</span>
+                                <span class="kanban-column-badge" id="badge-backlog">0</span>
+                            </div>
+                            <div class="kanban-column-cards" id="tasks-list-backlog">
+                                <!-- Cards populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- In Progress Column -->
+                        <div class="kanban-column" id="col-in_progress" ondragover="allowTaskDrop(event)" ondragleave="handleTaskDragLeave(event)" ondrop="dropTask(event, 'in_progress')">
+                            <div class="kanban-column-header">
+                                <span class="kanban-column-title">In Progress</span>
+                                <span class="kanban-column-badge" id="badge-in_progress">0</span>
+                            </div>
+                            <div class="kanban-column-cards" id="tasks-list-in_progress">
+                                <!-- Cards populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- In Review Column -->
+                        <div class="kanban-column" id="col-in_review" ondragover="allowTaskDrop(event)" ondragleave="handleTaskDragLeave(event)" ondrop="dropTask(event, 'in_review')">
+                            <div class="kanban-column-header">
+                                <span class="kanban-column-title">In Review</span>
+                                <span class="kanban-column-badge" id="badge-in_review">0</span>
+                            </div>
+                            <div class="kanban-column-cards" id="tasks-list-in_review">
+                                <!-- Cards populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Done Column -->
+                        <div class="kanban-column" id="col-done" ondragover="allowTaskDrop(event)" ondragleave="handleTaskDragLeave(event)" ondrop="dropTask(event, 'done')">
+                            <div class="kanban-column-header">
+                                <span class="kanban-column-title">Done</span>
+                                <span class="kanban-column-badge" id="badge-done">0</span>
+                            </div>
+                            <div class="kanban-column-cards" id="tasks-list-done">
+                                <!-- Cards populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- List View Container -->
+                    <div id="tasks-list-view-container" class="tasks-list-view" style="display: none;">
+                        <table class="list-view-table">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Summary</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Assignee</th>
+                                    <th>Creator</th>
+                                    <th>Created At</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tasks-list-view-tbody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- ==============================================================================
+   MODAL DIALOGS
+   ============================================================================== -->
+
+<!-- Email Compose Modal -->
+<div id="email-compose-modal" class="comm-form-modal">
+    <div class="comm-modal-card">
+        <div class="comm-modal-header">
+            <h3 class="comm-modal-title">Compose Email</h3>
+            <button class="comm-modal-close" onclick="closeComposeModal()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label for="mail-compose-receiver">Recipient</label>
+            <select id="mail-compose-receiver" class="form-select">
+                <!-- Populated dynamically -->
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="mail-compose-subject">Subject</label>
+            <input type="text" id="mail-compose-subject" class="form-input" placeholder="Enter subject line...">
+        </div>
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="mail-compose-body">Email Body</label>
+            <textarea id="mail-compose-body" class="form-input" rows="8" placeholder="Type your email message..."></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button class="bubbly-btn cancel-btn" onclick="closeComposeModal()">Cancel</button>
+            <button class="bubbly-btn primary-btn" onclick="sendLeoxurEmail()">Send Email</button>
+        </div>
+    </div>
+</div>
+
+<!-- Task Create Modal -->
+<div id="task-create-modal" class="comm-form-modal">
+    <div class="comm-modal-card">
+        <div class="comm-modal-header">
+            <h3 class="comm-modal-title">Create Issue</h3>
+            <button class="comm-modal-close" onclick="closeCreateTaskModal()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label for="task-create-title">Summary *</label>
+            <input type="text" id="task-create-title" class="form-input" placeholder="What needs to be done?">
+        </div>
+        <div class="form-group">
+            <label for="task-create-description">Description</label>
+            <textarea id="task-create-description" class="form-input" rows="4" placeholder="Add detailed instructions..."></textarea>
+        </div>
+        <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group" style="flex: 1;">
+                <label for="task-create-priority">Priority</label>
+                <select id="task-create-priority" class="form-select">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                    <option value="highest">Highest</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="task-create-status">Status</label>
+                <select id="task-create-status" class="form-select">
+                    <option value="backlog" selected>Backlog</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="in_review">In Review</option>
+                    <option value="done">Done</option>
+                    <option value="archived">Archived</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="task-create-assignee">Assignee</label>
+            <select id="task-create-assignee" class="form-select">
+                <option value="">Unassigned</option>
+                <!-- Populated dynamically -->
+            </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+            <button class="bubbly-btn cancel-btn" onclick="closeCreateTaskModal()">Cancel</button>
+            <button class="bubbly-btn primary-btn" onclick="createLeoxurTask()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Task View/Edit Modal -->
+<div id="task-view-modal" class="comm-form-modal">
+    <div class="comm-modal-card">
+        <div class="comm-modal-header">
+            <h3 class="comm-modal-title" style="display: flex; align-items: center; gap: 8px;">
+                <span>Issue Detail</span>
+                <span id="task-detail-id" style="font-size: 0.8rem; background: var(--comm-bg-muted); color: var(--comm-text-muted); padding: 2px 6px; border-radius: 4px;">TSK-0</span>
+            </h3>
+            <button class="comm-modal-close" onclick="closeTaskViewModal()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label for="task-view-title">Summary *</label>
+            <input type="text" id="task-view-title" class="form-input">
+        </div>
+        <div class="form-group">
+            <label for="task-view-description">Description</label>
+            <textarea id="task-view-description" class="form-input" rows="4"></textarea>
+        </div>
+        <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group" style="flex: 1;">
+                <label for="task-view-priority">Priority</label>
+                <select id="task-view-priority" class="form-select">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="highest">Highest</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="task-view-status">Status</label>
+                <select id="task-view-status" class="form-select">
+                    <option value="backlog">Backlog</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="in_review">In Review</option>
+                    <option value="done">Done</option>
+                    <option value="archived">Archived</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="task-view-assignee">Assignee</label>
+            <select id="task-view-assignee" class="form-select">
+                <option value="">Unassigned</option>
+                <!-- Populated dynamically -->
+            </select>
+        </div>
+        
+        <!-- Manager Review Actions Banner -->
+        <div id="manager-review-actions-section" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+            <p style="margin: 0 0 0.5rem 0; font-size: 0.8rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em;">Manager Approval Action Required</p>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="button" class="bubbly-btn" onclick="approveTaskByManager()" style="background-color: #10b981; color: white; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; border: none; cursor: pointer; transition: background-color 0.2s;">Approve Issue</button>
+                <button type="button" class="bubbly-btn" onclick="rejectTaskByManager()" style="background-color: #ef4444; color: white; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; border: none; cursor: pointer; transition: background-color 0.2s;">Reject Issue</button>
+            </div>
+        </div>
+        
+        <!-- Metadata section -->
+        <div class="task-metadata" style="font-size: 0.75rem; color: var(--comm-text-muted); margin-top: 1rem; border-top: 1px dashed var(--comm-border); padding-top: 0.75rem; line-height: 1.5;">
+            <div>Created by: <span id="task-detail-creator" style="font-weight:700;">-</span></div>
+            <div>Created at: <span id="task-detail-created-at">-</span></div>
+            <div>Updated at: <span id="task-detail-updated-at">-</span></div>
+        </div>
+
+        <!-- Task Comments Section -->
+        <div class="task-comments-section" style="margin-top: 1rem; border-top: 1px solid var(--comm-border); padding-top: 0.75rem;">
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; font-weight: 800; color: var(--comm-text-main);">Comments</h4>
+            <div id="task-comments-list" style="max-height: 150px; overflow-y: auto; margin-bottom: 0.75rem; border: 1px solid var(--comm-border); border-radius: 6px; padding: 0.5rem; background: var(--comm-bg-muted);">
+                <!-- Comments rendered dynamically -->
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="task-comment-input" class="form-input" placeholder="Write a comment..." style="margin-bottom: 0; font-size: 0.8rem; padding: 0.4rem 0.6rem;">
+                <button type="button" class="bubbly-btn primary-btn" onclick="addTaskComment()" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 700; white-space: nowrap;">Comment</button>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; gap: 0.75rem; margin-top: 1.5rem;">
+            <button class="bubbly-btn danger-btn" onclick="deleteLeoxurTask()" style="background-color: var(--comm-danger); color: white;">Delete Issue</button>
+            <div style="display: flex; gap: 0.75rem;">
+                <button class="bubbly-btn cancel-btn" onclick="closeTaskViewModal()">Cancel</button>
+                <button class="bubbly-btn primary-btn" onclick="updateLeoxurTask()">Save Changes</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ==============================================================================
+   JAVASCRIPT CORE LOGIC
+   ============================================================================== -->
+<script>
+    // Helper to get initials from a full name (excluding text inside parentheses)
+    function getAvatarInitials(name) {
+        if (!name) return '?';
+        let clean = name.replace(/\([^)]*\)/g, '').trim();
+        let parts = clean.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+        if (parts.length === 1 && parts[0]) {
+            return parts[0].substring(0, 2).toUpperCase();
+        }
+        return '?';
+    }
+
+    // State variables
+    let activeUserId = "{{ active_user_id }}";
+    let participants = [];
+
+    let emails = [];
+    let messages = [];
+    let tasks = [];
+    let currentTasksView = 'kanban'; // 'kanban' or 'list'
+    let currentTasksFilter = 'all'; // 'all' or 'mine'
+    
+    // SPA state
+    let activeTab = 'mails';
+    let activeMailFolder = 'inbox';
+    let selectedMailId = null;
+    let selectedTaskId = null;
+    let selectedChatRoom = 'general'; // general, support, managers, or direct_x_y
+
+    // Audio & notification states
+    let loadedEmailIds = new Set();
+    let selectedRole = 'Manager';
+    let currentReplyParentId = null;
+
+    // Load participants from Django template context
+    const allParticipants = [
+        {% for p in all_users %}
+        {
+            id: "{{ p.id|escapejs }}",
+            name: "{{ p.name|escapejs }}",
+            role: "{{ p.role|escapejs }}",
+            email: "{{ p.email|escapejs }}",
+            avatar_emoji: "{{ p.avatar_emoji|escapejs }}",
+            avatar_color: "{{ p.avatar_color|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    document.addEventListener("DOMContentLoaded", function() {
+        selectRole('Manager');
+        
+        if (activeUserId) {
+            loadAllData();
+            // Start polling updates for real-time messages
+            setInterval(loadAllData, 4000);
+        }
+    });
+
+    // Plays a high-fidelity synthesized notification chime using the Web Audio API
+    function playNotificationSound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const playNote = (frequency, startTime, duration) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(frequency, startTime);
+                gain.gain.setValueAtTime(0.15, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            };
+            const now = audioCtx.currentTime;
+            playNote(659.25, now, 0.3); // E5
+            playNote(880.00, now + 0.12, 0.45); // A5
+        } catch (e) {
+            console.error("Failed to play synthesized sound:", e);
+        }
+    }
+
+    // Slides in a premium glassmorphic toast notification at the top-right
+    function showToast(title, message, icon = '✉️') {
+        let container = document.getElementById('comm-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'comm-toast-container';
+            container.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                pointer-events: none;
+            `;
+            document.body.appendChild(container);
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = 'comm-toast';
+        toast.style.cssText = `
+            background: var(--comm-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--comm-glass-border);
+            border-radius: var(--comm-radius);
+            padding: 1rem 1.25rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            color: var(--comm-text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 320px;
+            pointer-events: auto;
+            transform: translateX(350px);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+            opacity: 0;
+        `;
+        
+        toast.innerHTML = `
+            <div style="font-size: 1.5rem;">${icon}</div>
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 2px;">${title}</div>
+                <div style="font-size: 0.75rem; color: var(--comm-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">${message}</div>
+            </div>
+            <button style="background:none; border:none; color:var(--comm-text-muted); cursor:pointer; font-size:1.2rem; padding:0; margin-left:5px; line-height:1;" onclick="this.parentElement.remove()">&times;</button>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+            toast.style.opacity = '1';
+        }, 10);
+        
+        setTimeout(() => {
+            toast.style.transform = 'translateX(350px)';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 4500);
+    }
+
+    // Role selection logic at Identity Splash Gate
+    function selectRole(role) {
+        selectedRole = role;
+        
+        document.querySelectorAll('.comm-role-card').forEach(card => {
+            if (card.getAttribute('data-role') === role) {
+                card.classList.add('active');
+            } else {
+                card.classList.remove('active');
+            }
+        });
+        
+        const userLabel = document.getElementById('comm-user-label');
+        userLabel.innerText = `Select ${role} Profile`;
+        
+        const secretLabel = document.getElementById('comm-secret-label');
+        const secretInput = document.getElementById('comm-auth-secret');
+        const submitBtn = document.getElementById('comm-auth-submit-btn');
+        
+        if (role === 'Employee') {
+            secretLabel.innerText = 'PIN Code (4 digits)';
+            secretInput.placeholder = 'Enter 4-digit PIN';
+            secretInput.type = 'password';
+            secretInput.maxLength = 4;
+            submitBtn.innerHTML = '👤 Connect Workspace';
+        } else if (role === 'Support Engineer') {
+            secretLabel.innerText = 'Support Password';
+            secretInput.placeholder = 'Enter engineer password';
+            secretInput.type = 'password';
+            secretInput.maxLength = 50;
+            submitBtn.innerHTML = '🛠️ Connect Workspace';
+        } else {
+            secretLabel.innerText = 'Password';
+            secretInput.placeholder = 'Enter password';
+            secretInput.type = 'password';
+            secretInput.maxLength = 50;
+            submitBtn.innerHTML = '💼 Connect Workspace';
+        }
+        
+        secretInput.value = '';
+        document.getElementById('comm-auth-error-msg').classList.remove('show');
+        
+        populateUserDropdown();
+    }
+
+    function populateUserDropdown() {
+        const select = document.getElementById('comm-user-select');
+        if (!select) return;
+        select.innerHTML = `<option value="" selected disabled>-- Select ${selectedRole} Profile --</option>`;
+        
+        const filtered = allParticipants.filter(p => p.role === selectedRole);
+        filtered.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.text = p.name;
+            select.add(opt);
+        });
+    }
+
+    // Authenticate user via AJAX API
+    function authenticateCommUser() {
+        const select = document.getElementById('comm-user-select');
+        const secret = document.getElementById('comm-auth-secret').value;
+        const errorMsg = document.getElementById('comm-auth-error-msg');
+        
+        if (!select.value) {
+            alert(`Please select a ${selectedRole.toLowerCase()} profile.`);
+            return;
+        }
+
+        const payload = {
+            user_id: select.value,
+            secret: secret,
+        };
+
+        // Determine username from selected profile text if manager
+        const selectedOpt = select.options[select.selectedIndex];
+        if (selectedRole === 'Manager') {
+            payload.username = selectedOpt.text.split(' ')[0];
+        }
+
+        fetch('/leoxur-comm/auth/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                activeUserId = data.user_id;
+                errorMsg.classList.remove('show');
+                
+                // Toggle gates view
+                document.getElementById('comm-auth-gate-section').style.display = 'none';
+                document.getElementById('comm-dashboard-layout-section').style.display = 'grid';
+                
+                loadAllData();
+                setInterval(loadAllData, 4000);
+            } else {
+                errorMsg.innerText = data.error;
+                errorMsg.classList.add('show');
+            }
+        })
+        .catch(err => {
+            errorMsg.innerText = "Server communication failure.";
+            errorMsg.classList.add('show');
+        });
+    }
+
+    // Log Out Identity session
+    function logoutCommUser() {
+        fetch('/leoxur-comm/logout/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN }
+        })
+        .then(() => {
+            activeUserId = null;
+            document.getElementById('comm-dashboard-layout-section').style.display = 'none';
+            document.getElementById('comm-auth-gate-section').style.display = 'block';
+            document.getElementById('comm-auth-secret').value = '';
+            selectRole('Manager');
+        });
+    }
+
+    // Fetch and redraw SPA layouts
+    function loadAllData() {
+        if (!activeUserId) return Promise.resolve();
+        
+        return fetch('/leoxur-comm/data/')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    participants = data.participants;
+                    emails = data.emails;
+                    messages = data.messages;
+                    tasks = data.tasks || [];
+                    
+                    // Render Profile info
+                    const profile = data.active_user;
+                    if (profile) {
+                        const avatar = document.getElementById('active-user-avatar');
+                        avatar.innerText = getAvatarInitials(profile.name);
+                        avatar.style.setProperty('--avatar-color', profile.avatar_color);
+                        document.getElementById('active-user-name').innerText = profile.name;
+                        document.getElementById('active-user-role').innerText = profile.role;
+                    }
+
+                    // Check for new emails and trigger alerts
+                    const inboxEmails = emails.filter(m => m.receiver_id === activeUserId);
+                    let hasNewEmail = false;
+                    let newEmailObj = null;
+
+                    if (loadedEmailIds.size > 0) {
+                        inboxEmails.forEach(email => {
+                            if (!loadedEmailIds.has(email.id)) {
+                                hasNewEmail = true;
+                                newEmailObj = email;
+                            }
+                        });
+                    }
+
+                    // Re-populate loaded email IDs
+                    loadedEmailIds.clear();
+                    inboxEmails.forEach(email => loadedEmailIds.add(email.id));
+
+                    if (hasNewEmail && newEmailObj) {
+                        playNotificationSound();
+                        showToast(`New Mail from ${newEmailObj.sender.name.split(' ')[0]}`, newEmailObj.subject);
+                    }
+
+                    // Update Mails sidebar tab badge count
+                    const unreadInboxCount = inboxEmails.filter(m => !m.is_read).length;
+                    const badge = document.getElementById('mail-unread-badge');
+                    if (badge) {
+                        if (unreadInboxCount > 0) {
+                            badge.innerText = unreadInboxCount;
+                            badge.style.display = 'inline-block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+
+                    // Show or hide managers channel
+                    const mgrBtn = document.getElementById('chat-channel-managers');
+                    if (mgrBtn) {
+                        if (activeUserId.startsWith('manager_')) {
+                            mgrBtn.style.display = 'flex';
+                        } else {
+                            mgrBtn.style.display = 'none';
+                            if (selectedChatRoom === 'managers') {
+                                setChatRoom('general');
+                            }
+                        }
+                    }
+
+                    // Render child layout items
+                    renderEmailList();
+                    renderChatClient();
+                    renderTasksBoard();
+                }
+            });
+    }
+
+    // Switch view tabs in SPA
+    function switchCommTab(tabName) {
+        activeTab = tabName;
+        
+        // Highlight active sidebar navigation item
+        document.querySelectorAll('.comm-nav-list .comm-nav-item').forEach(btn => {
+            if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tabName}'`)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        // Switch tab display
+        document.querySelectorAll('.comm-tab-content').forEach(pane => pane.classList.remove('active'));
+        document.getElementById(`comm-tab-${tabName}`).classList.add('active');
+        
+        loadAllData();
+    }
+
+    /* ==============================================================================
+       LEOXUR MAILS CORE LOGIC
+       ============================================================================== */
+    function setMailFolder(folder) {
+        activeMailFolder = folder;
+        document.getElementById('mail-folder-inbox').classList.toggle('active', folder === 'inbox');
+        document.getElementById('mail-folder-sent').classList.toggle('active', folder === 'sent');
+        renderEmailList();
+    }
+
+    function renderEmailList() {
+        const container = document.getElementById('mail-inbox-list');
+        container.innerHTML = '';
+        
+        // Filter folder items
+        let filteredEmails = [];
+        if (activeMailFolder === 'inbox') {
+            filteredEmails = emails.filter(m => m.receiver_id === activeUserId);
+        } else {
+            filteredEmails = emails.filter(m => m.sender_id === activeUserId);
+        }
+
+        if (filteredEmails.length === 0) {
+            container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--comm-text-muted); font-size: 0.85rem; font-weight:700;">No emails in folder</div>';
+            return;
+        }
+
+        filteredEmails.forEach(email => {
+            const div = document.createElement('div');
+            div.className = `mail-item ${!email.is_read && email.receiver_id === activeUserId ? 'unread' : ''} ${selectedMailId === email.id ? 'active' : ''}`;
+            div.onclick = () => selectMailItem(email.id);
+            
+            const metaName = activeMailFolder === 'inbox' ? email.sender.name : `To: ${email.receiver.name}`;
+            
+            div.innerHTML = `
+                <div class="mail-item-header">
+                    <span class="mail-item-sender">${metaName}</span>
+                    <span class="mail-item-date">${email.created_at.split(' ')[0]}</span>
+                </div>
+                <div class="mail-item-subject">${email.subject}</div>
+                <div class="mail-item-snippet">${email.body.substring(0, 50)}...</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function selectMailItem(id) {
+        selectedMailId = id;
+        
+        const email = emails.find(e => e.id === id);
+        if (!email) return;
+
+        // If email is unread and received by active user, mark as read
+        if (!email.is_read && email.receiver_id === activeUserId) {
+            email.is_read = true;
+            fetch('/leoxur-comm/read-email/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({ email_id: id })
+            }).then(() => {
+                // Update badge immediately
+                const inboxEmails = emails.filter(m => m.receiver_id === activeUserId);
+                const unreadInboxCount = inboxEmails.filter(m => !m.is_read).length;
+                const badge = document.getElementById('mail-unread-badge');
+                if (badge) {
+                    if (unreadInboxCount > 0) {
+                        badge.innerText = unreadInboxCount;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            });
+        }
+        
+        renderEmailList();
+        
+        document.getElementById('mail-view-empty').style.display = 'none';
+        document.getElementById('mail-view-details').style.display = 'block';
+
+        document.getElementById('mail-view-subject').innerText = email.subject;
+        document.getElementById('mail-view-sender-avatar').innerText = getAvatarInitials(email.sender.name);
+        document.getElementById('mail-view-sender-avatar').style.setProperty('--avatar-color', email.sender.avatar_color);
+        document.getElementById('mail-view-sender-name').innerText = email.sender.name;
+        document.getElementById('mail-view-receiver-name').innerText = `to ${email.receiver.name}`;
+        document.getElementById('mail-view-date').innerText = email.created_at;
+        document.getElementById('mail-view-body').innerText = email.body;
+    }
+
+    // Modal compose operations
+    function openComposeModal() {
+        const select = document.getElementById('mail-compose-receiver');
+        select.innerHTML = '<option value="" selected disabled>-- Select Recipient --</option>';
+        
+        // Add all users except current
+        participants.forEach(p => {
+            if (p.id !== activeUserId) {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.text = p.name;
+                select.add(opt);
+            }
+        });
+
+        document.getElementById('email-compose-modal').style.display = 'flex';
+    }
+
+    function closeComposeModal() {
+        document.getElementById('email-compose-modal').style.display = 'none';
+        document.getElementById('mail-compose-subject').value = '';
+        document.getElementById('mail-compose-body').value = '';
+    }
+
+    function sendLeoxurEmail() {
+        const rcvr = document.getElementById('mail-compose-receiver').value;
+        const subj = document.getElementById('mail-compose-subject').value.trim();
+        const body = document.getElementById('mail-compose-body').value.trim();
+        
+        if (!rcvr || !subj || !body) {
+            alert('Please compose receiver, subject, and body message fields!');
+            return;
+        }
+
+        fetch('/leoxur-comm/send-email/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                receiver_id: rcvr,
+                subject: subj,
+                body: body
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                closeComposeModal();
+                loadAllData();
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+
+    /* ==============================================================================
+       LEOXUR CHAT CORE LOGIC
+       ============================================================================== */
+    function setChatRoom(room) {
+        selectedChatRoom = room;
+        
+        // Highlight tab selection in left list
+        document.querySelectorAll('.chat-room-item').forEach(item => {
+            const isTextEqual = item.innerText.includes(`#${room}`) || (room.startsWith('direct_') && item.getAttribute('data-id') === room);
+            item.classList.toggle('active', isTextEqual);
+        });
+
+        // Set titles and headers descriptions
+        const titleEl = document.getElementById('chat-current-title');
+        const descEl = document.getElementById('chat-current-desc');
+        const inputEl = document.getElementById('chat-message-input');
+
+        if (room === 'general') {
+            titleEl.innerText = '#general';
+            descEl.innerText = "Public channel accessible by all employees, managers, and support engineers.";
+            inputEl.placeholder = "Type message in #general...";
+        } else if (room === 'support') {
+            titleEl.innerText = '#support';
+            descEl.innerText = "Engineering Support Desk queue. Raise bugs, layouts, and data sync discussions here.";
+            inputEl.placeholder = "Type message in #support...";
+        } else if (room === 'managers') {
+            titleEl.innerText = '#managers';
+            descEl.innerText = "Management and administration staff private channel.";
+            inputEl.placeholder = "Type message in #managers...";
+        } else if (room.startsWith('direct_')) {
+            const parts = room.replace('direct_', '').split('_');
+            const otherId = parts.find(p => p !== activeUserId && p.length > 0) || parts[1];
+            
+            let otherParticipant = participants.find(p => room.includes(p.id) && p.id !== activeUserId);
+            if (!otherParticipant) {
+                otherParticipant = participants.find(p => p.id === otherId);
+            }
+            
+            titleEl.innerText = otherParticipant ? otherParticipant.name : 'Direct Conversation';
+            descEl.innerText = `Private messaging with ${otherParticipant ? otherParticipant.name : 'colleague'}`;
+            inputEl.placeholder = `Send direct message...`;
+        }
+
+        cancelChatReply();
+        renderChatClient();
+    }
+
+    // Chat reply quoting triggers
+    function initiateChatReply(messageId, senderName, contentSnippet) {
+        currentReplyParentId = messageId;
+        document.getElementById('chat-reply-context-sender').innerText = senderName;
+        document.getElementById('chat-reply-context-snippet').innerText = `"${contentSnippet}"`;
+        document.getElementById('chat-reply-context-container').style.display = 'flex';
+        document.getElementById('chat-message-input').focus();
+    }
+
+    function cancelChatReply() {
+        currentReplyParentId = null;
+        const container = document.getElementById('chat-reply-context-container');
+        if (container) {
+            container.style.display = 'none';
+        }
+    }
+
+    function renderChatClient() {
+        const dmsList = document.getElementById('chat-dm-list');
+        
+        // 1. Render DMs List
+        dmsList.innerHTML = '';
+        participants.forEach(p => {
+            if (p.id !== activeUserId) {
+                const btn = document.createElement('button');
+                const roomKeyArr = [activeUserId, p.id].sort();
+                const roomKey = `direct_${roomKeyArr[0]}_${roomKeyArr[1]}`;
+                
+                btn.className = `chat-room-item ${selectedChatRoom === roomKey ? 'active' : ''}`;
+                btn.setAttribute('data-id', roomKey);
+                btn.onclick = () => setChatRoom(roomKey);
+                btn.innerHTML = `<span class="comm-user-avatar" style="width:20px; height:20px; font-size:0.65rem; display:inline-flex; vertical-align:middle; margin-right:6px; --avatar-color:${p.avatar_color}">${getAvatarInitials(p.name)}</span> ${p.name}`;
+                dmsList.appendChild(btn);
+            }
+        });
+
+        // 2. Render Chat Messages Stream
+        const msgContainer = document.getElementById('chat-messages-container');
+        msgContainer.innerHTML = '';
+        
+        const filteredMessages = messages.filter(m => m.room_id === selectedChatRoom);
+        
+        if (filteredMessages.length === 0) {
+            msgContainer.innerHTML = '<div style="padding:3rem; text-align:center; color:var(--comm-text-muted); font-size:0.85rem; font-weight:700;">No messages yet. Send first message!</div>';
+            return;
+        }
+
+        filteredMessages.forEach(msg => {
+            const isMe = msg.sender_id === activeUserId;
+            
+            const wrap = document.createElement('div');
+            wrap.className = `chat-bubble-wrapper ${isMe ? 'sent' : 'received'}`;
+            
+            let parentHtml = '';
+            if (msg.parent_sender_name && msg.parent_content) {
+                parentHtml = `
+                    <div class="chat-parent-quote" style="
+                        background: rgba(0, 0, 0, 0.05);
+                        border-left: 3px solid var(--comm-primary);
+                        padding: 0.25rem 0.5rem;
+                        font-size: 0.75rem;
+                        border-radius: 4px;
+                        margin-bottom: 0.35rem;
+                        color: ${isMe ? 'rgba(255, 255, 255, 0.8)' : 'var(--comm-text-muted)'};
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 250px;
+                    ">
+                        <strong>${msg.parent_sender_name}</strong>: ${msg.parent_content}
+                    </div>
+                `;
+            }
+            
+            let bubbleHtml = `
+                <div class="chat-bubble" style="position: relative;">
+                    <span class="chat-sender-name">${isMe ? 'Me' : msg.sender.name}</span>
+                    ${parentHtml}
+                    <div>${msg.content}</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem; gap: 10px;">
+                        <span class="chat-msg-meta" style="margin-top: 0;">${msg.created_at}</span>
+                        <button class="chat-reply-icon-btn" onclick="initiateChatReply(${msg.id}, '${msg.sender.name.replace(/'/g, "\\'")}', '${msg.content.substring(0, 40).replace(/'/g, "\\'")}')" style="
+                            background: none;
+                            border: none;
+                            color: ${isMe ? 'rgba(255,255,255,0.7)' : 'var(--comm-text-muted)'};
+                            cursor: pointer;
+                            font-size: 0.75rem;
+                            padding: 0;
+                            display: flex;
+                            align-items: center;
+                            gap: 2px;
+                            font-weight: 700;
+                        ">
+                            Reply
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            wrap.innerHTML = `
+                <div class="comm-user-avatar" style="width:34px; height:34px; font-size:1rem; --avatar-color:${msg.sender.avatar_color}">
+                    ${getAvatarInitials(msg.sender.name)}
+                </div>
+                ${bubbleHtml}
+            `;
+            
+            msgContainer.appendChild(wrap);
+        });
+
+        // Scroll chat stream window to bottom
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+    }
+
+    function handleChatInputKey(e) {
+        if (e.key === 'Enter') {
+            sendChatMessage();
+        }
+    }
+
+    function sendChatMessage() {
+        const input = document.getElementById('chat-message-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        const payload = {
+            room_id: selectedChatRoom,
+            content: text
+        };
+        if (currentReplyParentId) {
+            payload.parent_id = currentReplyParentId;
+        }
+
+        fetch('/leoxur-comm/send-chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                input.value = '';
+                cancelChatReply();
+                loadAllData();
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+
+    // ==============================================================================
+    // LEOXUR KANBAN BOARD & TASKS LOGIC
+    // ==============================================================================
+    
+    function populateTaskAssigneeDropdowns() {
+        const createSelect = document.getElementById('task-create-assignee');
+        const viewSelect = document.getElementById('task-view-assignee');
+        
+        if (!createSelect || !viewSelect) return;
+        
+        // Save current selections
+        const currentCreateVal = createSelect.value;
+        const currentViewVal = viewSelect.value;
+        
+        // Populate select elements
+        let optionsHtml = '<option value="">Unassigned</option>';
+        participants.forEach(p => {
+            optionsHtml += `<option value="${p.id}">${p.name}</option>`;
+        });
+        
+        createSelect.innerHTML = optionsHtml;
+        viewSelect.innerHTML = optionsHtml;
+        
+        // Restore selections
+        createSelect.value = currentCreateVal;
+        viewSelect.value = currentViewVal;
+    }
+
+    function setTasksView(view) {
+        currentTasksView = view;
+        
+        // Toggle active button style
+        document.getElementById('btn-view-kanban').classList.toggle('active', view === 'kanban');
+        document.getElementById('btn-view-list').classList.toggle('active', view === 'list');
+        
+        // Toggle containers
+        document.getElementById('tasks-kanban-board-container').style.display = view === 'kanban' ? 'grid' : 'none';
+        document.getElementById('tasks-list-view-container').style.display = view === 'list' ? 'block' : 'none';
+        
+        renderTasksBoard();
+    }
+
+    function setTasksFilter(filter) {
+        currentTasksFilter = filter;
+        
+        // Toggle active button style
+        document.getElementById('btn-filter-all').classList.toggle('active', filter === 'all');
+        document.getElementById('btn-filter-mine').classList.toggle('active', filter === 'mine');
+        
+        renderTasksBoard();
+    }
+
+    function renderTasksBoard() {
+        if (activeTab !== 'tasks') return;
+
+        populateTaskAssigneeDropdowns();
+
+        // 1. Filter tasks
+        let displayTasks = tasks;
+        if (currentTasksFilter === 'mine') {
+            displayTasks = tasks.filter(t => t.assignee_id === activeUserId);
+        }
+
+        if (currentTasksView === 'kanban') {
+            // Render Kanban columns
+            const statuses = ['backlog', 'in_progress', 'in_review', 'done'];
+            const columnCounts = { backlog: 0, in_progress: 0, in_review: 0, done: 0 };
+            const lists = {
+                backlog: document.getElementById('tasks-list-backlog'),
+                in_progress: document.getElementById('tasks-list-in_progress'),
+                in_review: document.getElementById('tasks-list-in_review'),
+                done: document.getElementById('tasks-list-done')
+            };
+            
+            statuses.forEach(status => {
+                if (lists[status]) lists[status].innerHTML = '';
+            });
+
+            displayTasks.forEach(task => {
+                const listContainer = lists[task.status];
+                if (!listContainer) return;
+
+                columnCounts[task.status]++;
+
+                const card = document.createElement('div');
+                card.className = `task-card priority-${task.priority}`;
+                card.onclick = () => openTaskViewModal(task.id);
+                
+                // Allow drag and drop only if unassigned, assigned to current user, or user is manager
+                const isManager = activeUserId && activeUserId.startsWith('manager_');
+                const isDragAllowed = !task.assignee_id || task.assignee_id === activeUserId || isManager;
+                if (isDragAllowed) {
+                    card.setAttribute('draggable', 'true');
+                    card.ondragstart = (e) => handleTaskDragStart(e, task);
+                    card.ondragend = (e) => handleTaskDragEnd(e);
+                } else {
+                    card.setAttribute('draggable', 'false');
+                    card.style.cursor = 'not-allowed';
+                    card.title = 'Only the assignee can drag/move this task.';
+                }
+                
+                let priorityBadge = '';
+                if (task.priority === 'low') priorityBadge = 'Low';
+                else if (task.priority === 'medium') priorityBadge = 'Medium';
+                else if (task.priority === 'high') priorityBadge = 'High';
+                else if (task.priority === 'highest') priorityBadge = 'Highest';
+
+                const descriptionSnippet = task.description ? 
+                    (task.description.length > 80 ? task.description.substring(0, 80) + '...' : task.description) : 
+                    'No description provided.';
+
+                card.innerHTML = `
+                    <div class="task-card-header">
+                        <span class="task-card-key">TSK-${task.id}</span>
+                        <span class="task-card-priority-tag priority-tag-${task.priority}">${priorityBadge}</span>
+                    </div>
+                    <h4 class="task-card-title">${escapeHTML(task.title)}</h4>
+                    <p class="task-card-desc">${escapeHTML(descriptionSnippet)}</p>
+                    <div class="task-card-footer">
+                        <div class="task-card-assignee">
+                            <span class="comm-user-avatar task-assignee-avatar" style="--avatar-color: ${task.assignee.avatar_color}">
+                                ${getAvatarInitials(task.assignee.name)}
+                            </span>
+                            <span class="task-assignee-name">${escapeHTML(task.assignee.name.split(' ')[0])}</span>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+
+            statuses.forEach(status => {
+                const badge = document.getElementById(`badge-${status}`);
+                if (badge) {
+                    badge.innerText = columnCounts[status];
+                }
+            });
+        } else {
+            // Render List view table
+            const tbody = document.getElementById('tasks-list-view-tbody');
+            tbody.innerHTML = '';
+            
+            if (displayTasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--comm-text-muted); padding: 2rem;">No issues found.</td></tr>';
+                return;
+            }
+
+            displayTasks.forEach(task => {
+                const tr = document.createElement('tr');
+                tr.onclick = () => openTaskViewModal(task.id);
+                tr.className = 'list-view-row';
+                
+                let pBadge = '';
+                if (task.priority === 'low') pBadge = 'Low';
+                else if (task.priority === 'medium') pBadge = 'Medium';
+                else if (task.priority === 'high') pBadge = 'High';
+                else if (task.priority === 'highest') pBadge = 'Highest';
+
+                let statusLabel = task.status.replace('_', ' ');
+                
+                tr.innerHTML = `
+                    <td><strong>TSK-${task.id}</strong></td>
+                    <td class="list-view-summary-cell">${escapeHTML(task.title)}</td>
+                    <td><span class="priority-tag-${task.priority}" style="padding: 2px 6px; border-radius: 4px; font-size:0.75rem; font-weight:700;">${pBadge}</span></td>
+                    <td style="text-transform: capitalize;"><span class="status-badge-${task.status}">${statusLabel}</span></td>
+                    <td>${escapeHTML(task.assignee.name.split(' ')[0])}</td>
+                    <td>${escapeHTML(task.creator.name.split(' ')[0])}</td>
+                    <td>${task.created_at}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    }
+
+    // Drag and Drop implementation handlers
+    let draggedTaskId = null;
+
+    function handleTaskDragStart(e, task) {
+        const isManager = activeUserId && activeUserId.startsWith('manager_');
+        if (task.assignee_id && task.assignee_id !== activeUserId && !isManager) {
+            e.preventDefault();
+            return;
+        }
+        draggedTaskId = task.id;
+        e.dataTransfer.effectAllowed = 'move';
+        document.querySelectorAll('.kanban-column').forEach(col => {
+            col.classList.add('drag-active');
+        });
+        e.target.classList.add('dragging');
+    }
+
+    function handleTaskDragEnd(e) {
+        document.querySelectorAll('.kanban-column').forEach(col => {
+            col.classList.remove('drag-active');
+            col.classList.remove('drag-over');
+        });
+        e.target.classList.remove('dragging');
+        draggedTaskId = null;
+    }
+
+    function allowTaskDrop(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function handleTaskDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function dropTask(e, targetStatus) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+
+        if (!draggedTaskId) return;
+
+        const task = tasks.find(t => t.id === draggedTaskId);
+        if (!task) return;
+
+        if (task.status === targetStatus) return;
+
+        // Workflow restriction: moving out of In Review requires Manager profile
+        if (task.status === 'in_review') {
+            if (!activeUserId || !activeUserId.startsWith('manager_')) {
+                alert('Only managers can approve or reject issues in review.');
+                return;
+            }
+        }
+
+        // Assignee restriction: only assignee or manager can move status
+        const isManager = activeUserId && activeUserId.startsWith('manager_');
+        if (task.assignee_id && task.assignee_id !== activeUserId && !isManager) {
+            alert('Only the assignee or a manager can change the status of this task.');
+            return;
+        }
+
+        const payload = {
+            task_id: task.id,
+            status: targetStatus
+        };
+
+        fetch('/leoxur-comm/update-task/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                loadAllData();
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+
+    function openCreateTaskModal() {
+        populateTaskAssigneeDropdowns();
+        document.getElementById('task-create-title').value = '';
+        document.getElementById('task-create-description').value = '';
+        document.getElementById('task-create-priority').value = 'medium';
+        document.getElementById('task-create-status').value = 'backlog';
+        document.getElementById('task-create-assignee').value = '';
+        
+        document.getElementById('task-create-modal').classList.add('active');
+    }
+
+    function closeCreateTaskModal() {
+        document.getElementById('task-create-modal').classList.remove('active');
+    }
+
+    function openTaskViewModal(taskId) {
+        selectedTaskId = taskId;
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        populateTaskAssigneeDropdowns();
+
+        document.getElementById('task-detail-id').innerText = `TSK-${task.id}`;
+        document.getElementById('task-view-title').value = task.title;
+        document.getElementById('task-view-description').value = task.description;
+        document.getElementById('task-view-priority').value = task.priority;
+        document.getElementById('task-view-status').value = task.status;
+        document.getElementById('task-view-assignee').value = task.assignee_id || '';
+        
+        document.getElementById('task-detail-creator').innerText = task.creator.name;
+        document.getElementById('task-detail-created-at').innerText = task.created_at;
+        document.getElementById('task-detail-updated-at').innerText = task.updated_at;
+
+        // Toggle Manager Review Section
+        const managerSection = document.getElementById('manager-review-actions-section');
+        if (task.status === 'in_review' && activeUserId && activeUserId.startsWith('manager_')) {
+            managerSection.style.display = 'block';
+        } else {
+            managerSection.style.display = 'none';
+        }
+
+        // Render Task Comments
+        document.getElementById('task-comment-input').value = '';
+        renderTaskComments(task.comments);
+
+        document.getElementById('task-view-modal').classList.add('active');
+    }
+
+    function closeTaskViewModal() {
+        document.getElementById('task-view-modal').classList.remove('active');
+        selectedTaskId = null;
+    }
+
+    function createLeoxurTask() {
+        const title = document.getElementById('task-create-title').value.trim();
+        const description = document.getElementById('task-create-description').value.trim();
+        const priority = document.getElementById('task-create-priority').value;
+        const status = document.getElementById('task-create-status').value;
+        const assignee_id = document.getElementById('task-create-assignee').value;
+
+        if (!title) {
+            alert('Title is required!');
+            return;
+        }
+
+        const payload = { title, description, priority, status, assignee_id };
+
+        fetch('/leoxur-comm/create-task/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                closeCreateTaskModal();
+                loadAllData();
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+
+    function updateLeoxurTask() {
+        if (!selectedTaskId) return;
+
+        const title = document.getElementById('task-view-title').value.trim();
+        const description = document.getElementById('task-view-description').value.trim();
+        const priority = document.getElementById('task-view-priority').value;
+        const status = document.getElementById('task-view-status').value;
+        const assignee_id = document.getElementById('task-view-assignee').value;
+
+        if (!title) {
+            alert('Title is required!');
+            return;
+        }
+
+        const payload = { task_id: selectedTaskId, title, description, priority, status, assignee_id };
+
+        fetch('/leoxur-comm/update-task/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                closeTaskViewModal();
+                loadAllData();
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+
+    function deleteLeoxurTask() {
+        if (!selectedTaskId) return;
+
+        if (!confirm('Are you sure you want to delete this issue?')) return;
+
+        fetch('/leoxur-comm/delete-task/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({ task_id: selectedTaskId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                closeTaskViewModal();
+                loadAllData();
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function approveTaskByManager() {
+        if (!selectedTaskId) return;
+        updateTaskStatusByManager('done');
+    }
+
+    function rejectTaskByManager() {
+        if (!selectedTaskId) return;
+        updateTaskStatusByManager('backlog');
+    }
+
+    function updateTaskStatusByManager(newStatus) {
+        const payload = {
+            task_id: selectedTaskId,
+            status: newStatus
+        };
+
+        fetch('/leoxur-comm/update-task/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                closeTaskViewModal();
+                loadAllData();
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+
+    function addTaskComment() {
+        if (!selectedTaskId) return;
+        const input = document.getElementById('task-comment-input');
+        const content = input.value.trim();
+        if (!content) return;
+
+        fetch('/leoxur-comm/add-task-comment/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({ task_id: selectedTaskId, content: content })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                input.value = '';
+                // Reload data to get latest comments and redraw the view modal
+                loadAllData().then(() => {
+                    const task = tasks.find(t => t.id === selectedTaskId);
+                    if (task) {
+                        renderTaskComments(task.comments);
+                    }
+                });
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+
+    function renderTaskComments(comments) {
+        const container = document.getElementById('task-comments-list');
+        container.innerHTML = '';
+        if (!comments || comments.length === 0) {
+            container.innerHTML = '<div style="color: var(--comm-text-muted); font-size: 0.75rem; text-align: center; padding: 0.5rem;">No comments yet.</div>';
+            return;
+        }
+        comments.forEach(c => {
+            const div = document.createElement('div');
+            div.style.marginBottom = '0.5rem';
+            div.style.fontSize = '0.75rem';
+            div.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+            div.style.paddingBottom = '0.25rem';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom: 2px;">
+                    <strong style="color: var(--comm-text-main);">${escapeHTML(c.author_name)}</strong>
+                    <span style="color: var(--comm-text-muted); font-size:0.7rem;">${c.created_at}</span>
+                </div>
+                <div style="color: var(--comm-text-main); word-break: break-all;">${escapeHTML(c.content)}</div>
+            `;
+            container.appendChild(div);
+        });
+        container.scrollTop = container.scrollHeight;
+    }
+</script>
+{% endblock %}

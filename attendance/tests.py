@@ -5,7 +5,8 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from .models import (
     Employee, DepartmentOption, AvatarEmoji, AvatarColor, AppLayoutBlock,
-    AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission
+    AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission,
+    LeoxurTask
 )
 
 
@@ -135,6 +136,12 @@ class ManagerAuthenticationTests(TestCase):
         self.assertFalse(response.wsgi_request.user.is_authenticated)
 
     def test_manager_registration(self):
+        admin = User.objects.create_superuser(
+            username='admin_register_test',
+            email='admin_reg@company.com',
+            password='adminpassword123'
+        )
+        self.client.login(username='admin_register_test', password='adminpassword123')
         url = reverse('teacher_register')
         response = self.client.post(url, {
             'username': 'new_teacher',
@@ -445,3 +452,367 @@ class TechSupportTests(TestCase):
         
         self.user.refresh_from_db()
         self.assertTrue(self.user.is_staff)
+
+
+class LeoxurCommTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.dept = DepartmentOption.objects.create(emoji="💻", name="Engineering", order=1)
+        self.employee = Employee.objects.create(
+            first_name="Alice",
+            last_name="Smith",
+            department="Engineering",
+            avatar_emoji="💼",
+            avatar_color="#A0C4FF",
+            pin_code="1001"
+        )
+        self.engineer = SupportEngineer.objects.create(
+            name="Spock",
+            email="spock@vulcan.com",
+            password="engineerpassword123"
+        )
+        self.manager_user = User.objects.create_user(
+            username='manager_test',
+            email='manager@leoxur.com',
+            password='managerpassword123'
+        )
+
+    def test_auth_manager_success(self):
+        url = reverse('leoxur_comm_auth')
+        # Simulate active Django login authentication check
+        self.client.login(username='manager_test', password='managerpassword123')
+        payload = {
+            'user_id': f'manager_{self.manager_user.id}',
+            'secret': 'managerpassword123'
+        }
+        response = self.client.post(url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+
+    def test_auth_employee_success(self):
+        url = reverse('leoxur_comm_auth')
+        payload = {
+            'user_id': f'employee_{self.employee.id}',
+            'secret': '1001'
+        }
+        response = self.client.post(url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        self.assertEqual(self.client.session['leoxur_user_id'], f'employee_{self.employee.id}')
+
+    def test_auth_employee_wrong_pin(self):
+        url = reverse('leoxur_comm_auth')
+        payload = {
+            'user_id': f'employee_{self.employee.id}',
+            'secret': '9999'
+        }
+        response = self.client.post(url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['success'])
+        self.assertNotIn('leoxur_user_id', self.client.session)
+
+    def test_auth_engineer_success(self):
+        url = reverse('leoxur_comm_auth')
+        payload = {
+            'user_id': f'engineer_{self.engineer.id}',
+            'secret': 'engineerpassword123'
+        }
+        response = self.client.post(url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        self.assertEqual(self.client.session['leoxur_user_id'], f'engineer_{self.engineer.id}')
+
+    def test_auth_unauthorized_comm_data_access(self):
+        url = reverse('leoxur_comm_data')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_send_email_and_mark_as_read(self):
+        # Authenticate employee
+        session = self.client.session
+        session['leoxur_user_id'] = f'employee_{self.employee.id}'
+        session.save()
+
+        # Send email to engineer
+        send_url = reverse('leoxur_send_email')
+        payload = {
+            'receiver_id': f'engineer_{self.engineer.id}',
+            'subject': 'Support Request',
+            'body': 'My computer won\'t start.'
+        }
+        response = self.client.post(send_url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+
+        # Authenticate engineer to read the email
+        session['leoxur_user_id'] = f'engineer_{self.engineer.id}'
+        session.save()
+
+        # Fetch data
+        data_url = reverse('leoxur_comm_data')
+        response = self.client.get(data_url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data['emails']), 1)
+        email = data['emails'][0]
+        self.assertFalse(email['is_read'])
+
+        # Mark as read
+        read_url = reverse('leoxur_read_email')
+        read_payload = {'email_id': email['id']}
+        response = self.client.post(read_url, json.dumps(read_payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+
+        # Check update in data API
+        response = self.client.get(data_url)
+        email = response.json()['emails'][0]
+        self.assertTrue(email['is_read'])
+
+    def test_chat_replies_quoting(self):
+        session = self.client.session
+        session['leoxur_user_id'] = f'employee_{self.employee.id}'
+        session.save()
+
+        # Send first message
+        send_url = reverse('leoxur_send_chat')
+        payload1 = {
+            'room_id': 'general',
+            'content': 'Hello organization!'
+        }
+        response1 = self.client.post(send_url, json.dumps(payload1), content_type='application/json')
+        self.assertEqual(response1.status_code, 200)
+        msg_id1 = response1.json()['message_id']
+
+        # Send reply message quoting the first one
+        payload2 = {
+            'room_id': 'general',
+            'content': 'Hi Alice!',
+            'parent_id': msg_id1
+        }
+        response2 = self.client.post(send_url, json.dumps(payload2), content_type='application/json')
+        self.assertEqual(response2.status_code, 200)
+
+        # Retrieve messages and verify reply link and quote payload
+        data_url = reverse('leoxur_comm_data')
+        response3 = self.client.get(data_url)
+        messages = response3.json()['messages']
+        self.assertEqual(len(messages), 2)
+        
+        reply_msg = messages[1]
+        self.assertEqual(reply_msg['parent_id'], msg_id1)
+        self.assertEqual(reply_msg['parent_sender_name'], 'Alice Smith (Employee - Engineering)')
+        self.assertEqual(reply_msg['parent_content'], 'Hello organization!')
+
+    def test_private_managers_channel_security(self):
+        # Authenticate employee
+        session = self.client.session
+        session['leoxur_user_id'] = f'employee_{self.employee.id}'
+        session.save()
+
+        # Try to send a message to managers channel - should be blocked
+        send_url = reverse('leoxur_send_chat')
+        payload = {
+            'room_id': 'managers',
+            'content': 'Secret admin stuff'
+        }
+        response = self.client.post(send_url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(response.json()['success'])
+
+        # Authenticate manager
+        session['leoxur_user_id'] = f'manager_{self.manager_user.id}'
+        session.save()
+
+        # Manager sends to managers channel - should succeed
+        response = self.client.post(send_url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+
+
+class LeoxurWorkspaceTaskTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.dept = DepartmentOption.objects.create(emoji="💻", name="Engineering", order=1)
+        self.employee = Employee.objects.create(
+            first_name="Alice",
+            last_name="Smith",
+            department="Engineering",
+            avatar_emoji="👤",
+            avatar_color="#6B7280"
+        )
+        self.manager_user = User.objects.create_user(
+            username='manager_test',
+            email='manager@company.com',
+            password='testpassword123'
+        )
+
+    def test_task_crud_operations(self):
+        # Authenticate manager
+        session = self.client.session
+        session['leoxur_user_id'] = f'manager_{self.manager_user.id}'
+        session.save()
+
+        # Create Task
+        create_url = reverse('leoxur_create_task')
+        payload = {
+            'title': 'Test Task',
+            'description': 'Description for test task',
+            'priority': 'high',
+            'status': 'backlog',
+            'assignee_id': f'employee_{self.employee.id}'
+        }
+        response = self.client.post(create_url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        task_id = data['task_id']
+
+        # Verify task is created in DB
+        task = LeoxurTask.objects.get(id=task_id)
+        self.assertEqual(task.title, 'Test Task')
+        self.assertEqual(task.creator_id, f'manager_{self.manager_user.id}')
+        self.assertEqual(task.assignee_id, f'employee_{self.employee.id}')
+
+        # Update Task Status and Priority (authenticate as assignee)
+        session = self.client.session
+        session['leoxur_user_id'] = f'employee_{self.employee.id}'
+        session.save()
+
+        update_url = reverse('leoxur_update_task')
+        update_payload = {
+            'task_id': task_id,
+            'status': 'in_progress',
+            'priority': 'highest',
+            'title': 'Updated Title'
+        }
+        response = self.client.post(update_url, json.dumps(update_payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+
+        # Verify task is updated in DB
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'in_progress')
+        self.assertEqual(task.priority, 'highest')
+        self.assertEqual(task.title, 'Updated Title')
+
+        # Retrieve tasks via comm data endpoint
+        data_url = reverse('leoxur_comm_data')
+        response = self.client.get(data_url)
+        self.assertEqual(response.status_code, 200)
+        comm_data = response.json()
+        self.assertTrue(comm_data['success'])
+        self.assertEqual(len(comm_data['tasks']), 1)
+        self.assertEqual(comm_data['tasks'][0]['title'], 'Updated Title')
+        self.assertEqual(comm_data['tasks'][0]['assignee']['name'], 'Alice Smith (Employee - Engineering)')
+
+        # Delete Task
+        delete_url = reverse('leoxur_delete_task')
+        response = self.client.post(delete_url, json.dumps({'task_id': task_id}), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        self.assertFalse(LeoxurTask.objects.filter(id=task_id).exists())
+
+    def test_task_transition_permissions(self):
+        # 1. Create a task assigned to Alice Smith (Employee)
+        task = LeoxurTask.objects.create(
+            title='Alice Task',
+            status='backlog',
+            creator_id=f'manager_{self.manager_user.id}',
+            assignee_id=f'employee_{self.employee.id}'
+        )
+
+        # Create another employee user
+        another_employee = Employee.objects.create(
+            first_name="Bob",
+            last_name="Jones",
+            department="Engineering",
+            avatar_emoji="👤",
+            avatar_color="#CAFFBF"
+        )
+
+        # Login as another employee (Bob)
+        session = self.client.session
+        session['leoxur_user_id'] = f'employee_{another_employee.id}'
+        session.save()
+
+        # Try to move Alice's task to in_progress - should fail
+        update_url = reverse('leoxur_update_task')
+        response = self.client.post(update_url, json.dumps({
+            'task_id': task.id,
+            'status': 'in_progress'
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(response.json()['success'])
+
+        # Login as the assignee (Alice)
+        session['leoxur_user_id'] = f'employee_{self.employee.id}'
+        session.save()
+
+        # Try to move task to in_progress - should succeed
+        response = self.client.post(update_url, json.dumps({
+            'task_id': task.id,
+            'status': 'in_progress'
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'in_progress')
+
+        # Alice moves the task to in_review - should succeed
+        response = self.client.post(update_url, json.dumps({
+            'task_id': task.id,
+            'status': 'in_review'
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'in_review')
+
+        # Alice tries to move/approve the task to done (from in_review) - should fail
+        response = self.client.post(update_url, json.dumps({
+            'task_id': task.id,
+            'status': 'done'
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(response.json()['success'])
+
+        # Login as Manager
+        session['leoxur_user_id'] = f'manager_{self.manager_user.id}'
+        session.save()
+
+        # Manager approves the task to done (from in_review) - should succeed
+        response = self.client.post(update_url, json.dumps({
+            'task_id': task.id,
+            'status': 'done'
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'done')
+
+        # 2. Test unassigned task movement
+        unassigned_task = LeoxurTask.objects.create(
+            title='Unassigned Task',
+            status='backlog',
+            creator_id=f'manager_{self.manager_user.id}'
+        )
+
+        # Login as Employee (Alice)
+        session['leoxur_user_id'] = f'employee_{self.employee.id}'
+        session.save()
+
+        # Alice should be able to move unassigned task
+        response = self.client.post(update_url, json.dumps({
+            'task_id': unassigned_task.id,
+            'status': 'in_progress'
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        
+        unassigned_task.refresh_from_db()
+        self.assertEqual(unassigned_task.status, 'in_progress')
+

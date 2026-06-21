@@ -33,10 +33,10 @@
             <div class="ticker-marquee-list">
                 <!-- First copy of content -->
                 <div class="ticker-item">
-                    <span class="ticker-badge {{ schedule_status.badge }}">⏰ {{ schedule_status.status }}</span>
+                    <span class="ticker-badge {{ schedule_status.badge }}">{{ schedule_status.status }}</span>
                     <span class="ticker-text">{{ schedule_status.message }}</span>
                     <span class="ticker-divider">|</span>
-                    <span class="ticker-time">🕒 {{ schedule_status.current_time_str }}</span>
+                    <span class="ticker-time">{{ schedule_status.current_time_str }}</span>
                     <span class="ticker-divider">|</span>
                     <span class="ticker-timeline">
                         {% for m in schedule_status.milestones %}
@@ -49,10 +49,10 @@
                 </div>
                 <!-- Second copy of content for seamless loop -->
                 <div class="ticker-item" aria-hidden="true">
-                    <span class="ticker-badge {{ schedule_status.badge }}">⏰ {{ schedule_status.status }}</span>
+                    <span class="ticker-badge {{ schedule_status.badge }}">{{ schedule_status.status }}</span>
                     <span class="ticker-text">{{ schedule_status.message }}</span>
                     <span class="ticker-divider">|</span>
-                    <span class="ticker-time">🕒 {{ schedule_status.current_time_str }}</span>
+                    <span class="ticker-time">{{ schedule_status.current_time_str }}</span>
                     <span class="ticker-divider">|</span>
                     <span class="ticker-timeline">
                         {% for m in schedule_status.milestones %}
@@ -72,27 +72,37 @@
             <!-- Sleek Navbar -->
             <header class="playful-navbar">
                 <a href="{% url 'home' %}" class="navbar-brand">
-                    <span class="brand-emoji">⏰</span>
                     <span class="brand-text">Leoxur Solutions Limited</span>
                 </a>
                 <nav class="navbar-links">
                     <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-                        🏠 Home
+                        Home
                     </a>
                     <a href="{% url 'student_grid' %}" class="nav-link {% if request.resolver_match.url_name == 'student_grid' %}active{% endif %}">
-                        🏢 Employee Time & Expense
+                        Employee Time & Expense
                     </a>
                     <a href="{% url 'teacher_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' or request.resolver_match.url_name == 'teacher_login' or request.resolver_match.url_name == 'teacher_register' or request.resolver_match.url_name == 'admin_developer_page' or request.resolver_match.url_name == 'add_student' or request.resolver_match.url_name == 'edit_student' or request.resolver_match.url_name == 'delete_student' %}active{% endif %}">
-                        💼 Manager Portal
+                        Manager Portal
                     </a>
                     {% if can_raise_support %}
                     <a href="{% url 'support_home' %}" class="nav-link {% if 'support/' in request.path and 'engineer' not in request.path %}active{% endif %}">
-                        🛠️ IT Desk
+                        IT Desk
+                    </a>
+                    {% endif %}
+                    <a href="/leoxur-comm/" class="nav-link {% if 'leoxur-comm' in request.path %}active{% endif %}">
+                        Leoxur Workspace
+                    </a>
+                    {% if request.user.is_authenticated %}
+                    <span class="nav-user-info" style="color: var(--text-main); font-size: 0.9rem; font-weight: 700; margin-left: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                        {{ request.user.username }}
+                    </span>
+                    <a href="{% url 'teacher_logout' %}" class="nav-link" style="color: var(--danger-color) !important;">
+                        Logout
                     </a>
                     {% endif %}
                     <!-- Dark Mode Toggle Button -->
-                    <button id="theme-toggle-btn" class="nav-link" style="background: transparent; border: none; font-size: 1.25rem; cursor: pointer; padding: 0.5rem 0.75rem; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Dark/Light Mode">
-                        🌙
+                    <button id="theme-toggle-btn" class="nav-link" style="background: transparent; border: none; font-size: 0.85rem; font-weight: 700; cursor: pointer; padding: 0.5rem 0.75rem; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Dark/Light Mode">
+                        Dark Mode
                     </button>
                 </nav>
             </header>
@@ -110,7 +120,7 @@
             const currentTheme = localStorage.getItem("theme");
 
             if (currentTheme === "dark") {
-                if (themeBtn) themeBtn.textContent = "☀️";
+                if (themeBtn) themeBtn.textContent = "Light Mode";
             }
 
             if (themeBtn) {
@@ -119,9 +129,10 @@
                     let theme = "light";
                     if (document.body.classList.contains("dark-theme")) {
                         theme = "dark";
-                        themeBtn.textContent = "☀️";
+                        themeBtn.textContent = "Light Mode";
                     } else {
-                        themeBtn.textContent = "🌙";
+                        theme = "light";
+                        themeBtn.textContent = "Dark Mode";
                     }
                     localStorage.setItem("theme", theme);
                 });
