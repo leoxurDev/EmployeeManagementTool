@@ -1,12 +1,12 @@
 {% extends 'attendance/base.html' %}
 {% load static %}
 
-{% block title %}Welcome | Leoxur Solutions Limited{% endblock %}
+{% block title %}Welcome | {{ app_name }}{% endblock %}
 
 {% block content %}
 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 2rem; padding: 2rem 0;">
     <div class="school-logo-bubble">
-        <h1 style="font-size: 2.5rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 0.5rem;">Welcome to Leoxur Solutions Limited</h1>
+        <h1 style="font-size: 2.5rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 0.5rem;">Welcome to {{ app_name }}</h1>
         <p style="color: var(--text-muted); font-size: 1.1rem; font-weight: 500;">Select a portal below to manage your workday shifts and schedules</p>
     </div>
 

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Leoxur Solutions Limited | Employee Time & Expense{% endblock %}</title>
+    <title>{% block title %}{{ app_name }} | Employee Time & Expense{% endblock %}</title>
     <!-- Corporate Modern Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -72,7 +72,7 @@
             <!-- Sleek Navbar -->
             <header class="playful-navbar">
                 <a href="{% url 'home' %}" class="navbar-brand">
-                    <span class="brand-text">Leoxur Solutions Limited</span>
+                    <span class="brand-text">{{ app_name }}</span>
                 </a>
                 <nav class="navbar-links">
                     <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">

@@ -556,22 +556,20 @@ pip install -r requirements.txt
 # 4. Apply database migrations
 python manage.py migrate
 
-# 5. Seed default configuration data (departments, avatars, colors)
-python manage.py seed_configurations
-
-# 6. (Optional) Seed sample employees, rosters, and attendance logs
-python seed_data.py
-
-# 7. Create a superuser manager account
+# 5. Create a superuser manager account
 python manage.py createsuperuser
 
-# 8. Run the development server
-python manage.py runserver
+# 6. Run the development server
+APP_NAME="Acme Corp" python manage.py runserver
 ```
 
 Open `http://127.0.0.1:8000/` in your browser.
 
-> **Timezone Note:** The application is configured for **Asia/Kolkata (IST, UTC+5:30)** in `settings.py`. All shift times, attendance timestamps, and SLA calculations use this timezone. Update `TIME_ZONE` in `employee_attendance/settings.py` if deploying in a different region.
+> **No seed data needed.** The application starts with a clean empty database. After logging in at `/admin/`, add your departments, avatar emojis, and avatar colors. Then log in at `/manager/login/` to start adding employees.
+
+> **Organization Name:** Set the `APP_NAME` environment variable to display your organization's name in the portal title, navbar, and welcome page. Replace `"Acme Corp"` with your organization's actual name.
+
+> **Timezone Note:** The application is configured for **Asia/Kolkata (IST, UTC+5:30)** in `settings.py`. Update `TIME_ZONE` in `employee_attendance/settings.py` if deploying in a different region.
 
 ---
 
@@ -586,17 +584,13 @@ docker-compose up --build -d
 # 2. Run migrations inside the container
 docker-compose exec web python manage.py migrate
 
-# 3. Seed configuration data
-docker-compose exec web python manage.py seed_configurations
-
-# 4. (Optional) Seed sample data
-docker-compose exec web python seed_data.py
-
-# 5. Create a superuser
+# 3. Create a superuser
 docker-compose exec web python manage.py createsuperuser
 ```
 
 Open `http://localhost/` (port 80 maps to container port 8000).
+
+> **Organization Name:** The `APP_NAME` value is read from the `.env` file (created by `deploy.sh`) or from the `environment` key in `docker-compose.yml`. For quick local Docker testing, edit `.env` directly or set `APP_NAME=Acme Corp` in `docker-compose.yml`.
 
 ---
 
@@ -606,8 +600,9 @@ Open `http://localhost/` (port 80 maps to container port 8000).
 # 1. Build the image
 docker build -t employee-attendance-app .
 
-# 2. Run the container
+# 2. Run the container (pass APP_NAME as an env variable)
 docker run -d -p 8000:8000 \
+  -e APP_NAME="Acme Corp" \
   -v $(pwd)/db.sqlite3:/app/db.sqlite3 \
   --name employee-attendance-container \
   employee-attendance-app
@@ -615,13 +610,7 @@ docker run -d -p 8000:8000 \
 # 3. Apply migrations
 docker exec -it employee-attendance-container python manage.py migrate
 
-# 4. Seed configurations
-docker exec -it employee-attendance-container python manage.py seed_configurations
-
-# 5. (Optional) Seed sample data
-docker exec -it employee-attendance-container python seed_data.py
-
-# 6. Create a superuser
+# 4. Create a superuser
 docker exec -it employee-attendance-container python manage.py createsuperuser
 ```
 
@@ -631,7 +620,30 @@ Open `http://localhost:8000/` in your browser.
 
 ## ☁️ New Deployment Guide for the Organization
 
-> These steps cover deploying the application **from scratch** to a new cloud server. For **updating** an existing running deployment, see the [Updating an Existing Deployment](#-updating-an-existing-live-deployment) section below.
+> These steps cover deploying the application **from scratch** to a new cloud server. The included [`deploy.sh`](deploy.sh) script handles the full setup in one command — it **prompts for your organization name**, starts Docker, and runs migrations automatically.
+
+### ⚡ Quickstart with deploy.sh (Recommended)
+
+After cloning the repository on your server, simply run:
+
+```bash
+bash deploy.sh
+```
+
+You will be prompted:
+```
+  Enter your organization name (e.g. Acme Corp): _
+```
+
+Type your organization's name and press **Enter**. The script will:
+1. Write the name to `.env` as `APP_NAME`.
+2. Pull the latest code from Git (if inside a git repo).
+3. Build and start Docker containers.
+4. Apply database migrations.
+5. Launch the `createsuperuser` wizard.
+6. Print the server access URL.
+
+> The organization name appears in the browser tab title, the navbar brand, and the portal welcome heading — everywhere throughout the application.
 
 ### Prerequisites (All Providers)
 - A Linux VM (Ubuntu 22.04 LTS recommended).
@@ -676,42 +688,16 @@ docker --version
 docker-compose --version
 ```
 
-#### Step 4 — Clone & Deploy the Application
+#### Step 4 — Clone & Run the Deployment Script
 ```bash
 git clone https://github.com/leoxurDev/EmployeeManagementTool.git
 cd EmployeeManagementTool
-
-# Build and start the container in the background
-docker-compose up --build -d
-
-# Verify the container is running
-docker-compose ps
+bash deploy.sh
 ```
 
-#### Step 5 — Initialize the Database
-```bash
-# Apply all database migrations
-docker-compose exec web python manage.py migrate
+The script will prompt for your organization name, then automatically build containers, apply migrations, and guide you through creating the first admin account.
 
-# Seed default departments, avatar emojis, and avatar colors
-docker-compose exec web python manage.py seed_configurations
-
-# (Optional) Load sample employees and attendance data for testing
-docker-compose exec web python seed_data.py
-
-# Create the first superuser (admin) account
-docker-compose exec web python manage.py createsuperuser
-```
-
-#### Step 6 — Set Up IT Support Groups (First Time Only)
-```bash
-# Access the Django admin at http://<EC2-PUBLIC-IP>/admin/
-# Log in with your superuser credentials
-# Navigate to: Attendance → Assignment Groups → Add
-# Create your IT support groups (e.g., "L2 Support", "Network Team", "Infrastructure")
-```
-
-#### Step 7 — Access the Portal
+#### Step 5 — Access the Portal
 Open `http://<EC2-PUBLIC-IP>/` in your browser.
 
 ---
@@ -749,23 +735,16 @@ ssh -i your-azure-key.pem azureuser@<AZURE-VM-PUBLIC-IP>
 docker --version
 ```
 
-#### Step 4 — Clone & Deploy the Application
+#### Step 4 — Clone & Run the Deployment Script
 ```bash
 git clone https://github.com/leoxurDev/EmployeeManagementTool.git
 cd EmployeeManagementTool
-docker-compose up --build -d
-docker-compose ps
+bash deploy.sh
 ```
 
-#### Step 5 — Initialize the Database
-```bash
-docker-compose exec web python manage.py migrate
-docker-compose exec web python manage.py seed_configurations
-docker-compose exec web python seed_data.py         # Optional
-docker-compose exec web python manage.py createsuperuser
-```
+The script will prompt for your organization name, then automatically build containers, apply migrations, and guide you through creating the first admin account.
 
-#### Step 6 — Access the Portal
+#### Step 5 — Access the Portal
 Open `http://<AZURE-VM-PUBLIC-IP>/` in your browser.
 
 ---
@@ -804,23 +783,16 @@ gcloud compute ssh <INSTANCE-NAME> --zone=<ZONE>
 docker --version
 ```
 
-#### Step 4 — Clone & Deploy the Application
+#### Step 4 — Clone & Run the Deployment Script
 ```bash
 git clone https://github.com/leoxurDev/EmployeeManagementTool.git
 cd EmployeeManagementTool
-docker-compose up --build -d
-docker-compose ps
+bash deploy.sh
 ```
 
-#### Step 5 — Initialize the Database
-```bash
-docker-compose exec web python manage.py migrate
-docker-compose exec web python manage.py seed_configurations
-docker-compose exec web python seed_data.py         # Optional
-docker-compose exec web python manage.py createsuperuser
-```
+The script will prompt for your organization name, then automatically build containers, apply migrations, and guide you through creating the first admin account.
 
-#### Step 6 — Access the Portal
+#### Step 5 — Access the Portal
 Open `http://<GCP-EXTERNAL-IP>/` in your browser.
 
 > **GCP Note:** If you cannot access port 80, verify that your VPC network has a firewall rule allowing TCP ingress on port 80. Go to **VPC Network → Firewall → Create Firewall Rule** and add port 80 if missing.
@@ -850,11 +822,7 @@ docker-compose up --build -d
 #    (safe to run even if no new migrations exist)
 docker-compose exec web python manage.py migrate
 
-# 6. Re-run seed_configurations ONLY if new departments/avatars/colors were added
-#    (safe to re-run — uses get_or_create, skips existing records)
-docker-compose exec web python manage.py seed_configurations
-
-# 7. Verify the application is running correctly
+# 6. Verify the application is running correctly
 docker-compose ps
 docker-compose logs web --tail=50
 ```
@@ -870,7 +838,8 @@ Open the server's public IP in your browser to confirm the update is live.
 | **Static files** | `collectstatic` runs automatically during the Docker image build (`RUN python manage.py collectstatic --noinput` in `Dockerfile`). No manual action needed. |
 | **Zero-downtime** | For minimal downtime, use `docker-compose up -d --no-deps --build web` to rebuild only the `web` service without restarting dependencies. |
 | **Rollback** | If an update causes issues, run `git revert HEAD` followed by `docker-compose up --build -d` to roll back to the previous version. |
-| **Timezone changes** | If `TIME_ZONE` in `settings.py` is changed, existing timestamps in the database are stored in UTC — only the display timezone changes. No data migration is needed. |
+| **Org name change** | To change the organization name on a live deployment, edit `.env` (set `APP_NAME=New Name`), then run `docker-compose up -d` to pick up the new value. |
+| **Timezone changes** | If `TIME_ZONE` in `settings.py` is changed, existing timestamps in the database are stored in UTC — only the display timezone changes. No data migration needed. |
 
 ---
 

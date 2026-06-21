@@ -11,6 +11,7 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.conf import settings
 from .models import (
     Employee, Roster, Attendance, DepartmentOption, AppLayoutBlock,
     AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission,
@@ -802,6 +803,7 @@ def schedule_context_processor(request):
         'engineers_all': engineers_all,
         'active_engineer': active_engineer,
         'can_raise_support': can_raise_support,
+        'app_name': getattr(settings, 'APP_NAME', 'My Organization'),
     }
 
 
@@ -861,8 +863,6 @@ def support_home(request):
         messages.error(request, "Access denied. You do not have permission to raise support tickets. 🔐")
         return redirect('home')
 
-    ensure_support_seeded()
-    
     # Simple search
     search_query = request.GET.get('ticket_number', '').strip()
     if search_query:
