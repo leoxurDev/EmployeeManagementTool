@@ -20,6 +20,7 @@
    - [Engineer Identity Manager](#8-engineer-identity-manager)
    - [Leoxur Mails & Chat (Comm Suite)](#9-leoxur-mails--chat-communication-suite)
    - [Developer / Admin Customizer](#10-developer--admin-customizer-page)
+   - [Django Admin Panel](#11-django-admin-panel)
 5. [URL Route Reference](#-url-route-reference)
 6. [Static Assets & Stylesheets](#-static-assets--stylesheets)
 7. [Local Development Setup](#️-local-development-setup-virtualenv)
@@ -29,7 +30,9 @@
    - [Azure VM](#2-azure-virtual-machine-deployment)
    - [GCP Compute Engine](#3-gcp-compute-engine-deployment)
 10. [Updating an Existing Deployment](#-updating-an-existing-live-deployment)
-11. [Automated Tests](#-automated-tests)
+11. [Production Security Checklist](#-production-security-checklist)
+12. [Automated Tests](#-automated-tests)
+13. [Project File Structure](#-project-file-structure)
 
 ---
 
@@ -56,6 +59,7 @@ graph TD
         SupportEng[Engineer Console — /support/engineer/]
         LeoxurComm[Comm Suite — /leoxur-comm/]
         DevPage[Developer Customizer — /manager/developer/]
+        AdminPanel[Django Admin — /admin/]
     end
 ```
 
@@ -65,7 +69,7 @@ graph TD
 
 | Layer | Technology |
 |-------|-----------|
-| Backend Framework | Django 4.x |
+| Backend Framework | Django 4.2.x |
 | Language | Python 3.10 |
 | Database | SQLite 3 (file: `db.sqlite3`) |
 | Static File Serving | WhiteNoise 6.x |
@@ -75,6 +79,8 @@ graph TD
 | Frontend Logic | Vanilla JavaScript (AJAX, Fetch API) |
 | AI Integration | Google Gemini 2.5 Flash (optional, developer page) |
 | Containerization | Docker + Docker Compose |
+| Default Timezone | Asia/Kolkata (IST — UTC+5:30) |
+| Session Management | 30-minute inactivity expiry, browser-close reset |
 
 ---
 
@@ -101,14 +107,33 @@ graph TD
 | `LeoxurTask` | Internal task cards (Kanban-style) with priority and status |
 | `LeoxurTaskComment` | Comments on Leoxur tasks |
 
+### Shift Time Definitions
+
+| Shift | Hours |
+|-------|-------|
+| 🌅 Morning | 06:00 AM – 02:00 PM |
+| ☀️ Afternoon | 02:00 PM – 10:00 PM |
+| 🌙 Night | 10:00 PM – 06:00 AM |
+
+> **Late Detection Rule:** An employee is marked **Late ⏰** if they check in more than **15 minutes** after their assigned shift starts.
+
+### SLA Durations by Priority
+
+| Priority | SLA Window |
+|----------|-----------|
+| Critical | 1 hour |
+| High | 4 hours |
+| Moderate | 8 hours |
+| Low | 24 hours |
+
 ---
 
 ## 📄 Page-by-Page Guide
 
 ### 1. Home / Landing Page
 
-**URL:** `/`  
-**Template:** [`attendance/home.html`](attendance/templates/attendance/home.html)  
+**URL:** `/`
+**Template:** [`attendance/home.html`](attendance/templates/attendance/home.html)
 **View:** `home()`
 
 The public-facing entry point of the portal. Displays the company branding (Leoxur Solutions Limited) and provides navigation links to:
@@ -117,216 +142,337 @@ The public-facing entry point of the portal. Displays the company branding (Leox
 - The **IT Support Portal** (`/support/`)
 - The **Comm Suite** (`/leoxur-comm/`)
 
-The global **Shift Ticker Bar** (injected via `schedule_context_processor`) appears at the top of every page, showing the currently active shift (Morning 🌅 / Afternoon ☀️ / Night 🌙) with a live clock.
+The global **Shift Ticker Bar** (injected via `schedule_context_processor`) appears at the top of every page, showing the currently active shift (Morning 🌅 / Afternoon ☀️ / Night 🌙) with a live clock and milestone progress indicators.
+
+**No authentication required** — this page is publicly accessible.
 
 ---
 
 ### 2. Employee Time & Expense Kiosk (Grid)
 
-**URL:** `/grid/?classroom=<DepartmentName>`  
-**Template:** [`attendance/student_grid.html`](attendance/templates/attendance/student_grid.html)  
+**URL:** `/grid/?classroom=<DepartmentName>`
+**Template:** [`attendance/student_grid.html`](attendance/templates/attendance/student_grid.html)
 **View:** `employee_grid()`
 
-This is the self-service check-in station for employees, designed to be used on a shared terminal or tablet.
+This is the self-service check-in station for employees, designed to be used on a shared terminal or tablet in a common area.
 
 **Key Features:**
-- **Department Tabs** — Switch between active departments (Engineering, HR, Sales & Marketing, etc.)
-- **Employee Cards** — Each active employee appears as a card showing their avatar emoji, name, rostered shift, and today's attendance status.
-- **PIN Verification Modal** — Clicking an employee card opens a secure 4-digit PIN keypad. Upon success, the employee's current state is displayed (Not Checked In / Checked In / Checked Out).
-- **Check-In Flow** — After PIN verification, the employee selects their **Work Mode** (🏢 Office / 🏠 Remote / 🚗 Field) and confirms check-in.
-- **Late Detection** — If an employee checks in more than 15 minutes after their shift starts, they are automatically marked **Late ⏰**.
-- **Check-Out Flow** — Already checked-in employees see a **Check Out** button. Total hours worked is computed and displayed.
-- **Stats Banner** — Shows total employees, present count, and attendance rate for the selected department.
-- **Layout Customization** — Block order (header, tabs, stats, grid) is read from `AppLayoutBlock` in the database, allowing admins to reorder via the Developer Customizer.
+
+- **Department Tabs** — Switch between active departments (Engineering, HR, Sales & Marketing, etc.). The tab list is dynamically populated from the `DepartmentOption` database table.
+- **Employee Cards** — Each active employee appears as a card showing their avatar emoji, colored background, name, rostered shift, and today's attendance status badge.
+- **PIN Verification Modal** — Clicking an employee card opens a secure 4-digit PIN keypad overlay. The PIN is verified via an AJAX call to `/verify-pin/`.
+- **Check-In Flow** — After PIN verification, if the employee has not yet checked in, they are shown their current state and a **Work Mode** selector:
+  - 🏢 Office
+  - 🏠 Remote
+  - 🚗 Field
+  - Confirmation triggers `/toggle-attendance/` with `action=check_in`.
+- **Late Detection** — If an employee checks in more than 15 minutes after their rostered shift start, they are automatically marked **Late ⏰**.
+- **Check-Out Flow** — Already checked-in employees see a **Check Out** button. On confirmation, `checked_out_at` is recorded and total hours worked is displayed.
+- **Stats Banner** — Shows total employees, present count, and attendance rate (%) for the selected department.
+- **Layout Customization** — Block order (header, tabs, stats, grid) is read from the `AppLayoutBlock` table. If no records exist, defaults are seeded automatically. Admins can reorder/hide blocks using the Developer Customizer page.
+
+**Access:** No login required — intended for kiosk/shared-terminal use.
 
 ---
 
 ### 3. Manager Login & Register
 
-**URL (Login):** `/login/` or `/manager/login/`  
-**URL (Register):** `/manager/register/`  
-**Template:** [`attendance/login.html`](attendance/templates/attendance/login.html)  
+**URL (Login):** `/login/` or `/manager/login/`
+**URL (Register):** `/manager/register/`
+**Template:** [`attendance/login.html`](attendance/templates/attendance/login.html)
 **Views:** `manager_login()`, `manager_register()`
 
-- **Login** uses Django's built-in `AuthenticationForm`. On success, the manager is redirected to the Manager Dashboard.
-- **Registration** is restricted to existing superusers/staff only — regular managers cannot self-register.
-- The login page also shows a contextual employee/department overview on the side panel.
+- **Login** uses Django's built-in `AuthenticationForm`. On success, the manager is redirected to the Manager Dashboard (`/manager/`).
+- The login page also shows a contextual employee count and department overview in the side panel.
+- **Registration** is strictly restricted — only existing **staff or superuser** accounts can access `/manager/register/`. Regular managers cannot self-register new accounts.
+- Sessions expire after **30 minutes of inactivity** or when the browser is closed (`SESSION_EXPIRE_AT_BROWSER_CLOSE = True`, `SESSION_COOKIE_AGE = 1800`).
 
 ---
 
 ### 4. Manager Dashboard
 
-**URL:** `/manager/`  
-**Template:** [`attendance/teacher_dashboard.html`](attendance/templates/attendance/teacher_dashboard.html)  
+**URL:** `/manager/`
+**Template:** [`attendance/teacher_dashboard.html`](attendance/templates/attendance/teacher_dashboard.html)
 **View:** `manager_dashboard()` *(login required)*
 
 The central command panel for managers. Divided into several sections:
 
 **Quick Stats (Today):**
-- Total employees, Present, Late, Absent counts with a percentage attendance bar.
+- Total employees, Present, Late, Absent counts.
+- Visual attendance percentage bar.
 
 **Shift Roster Scheduler:**
 - An interactive table showing all employees and their assigned shifts for a selected date (defaults to today).
-- Managers can use the date picker to browse past or future dates.
+- Managers can use the **date picker** to browse past or future dates.
 - Each row has a shift dropdown to assign/update/remove a **Morning**, **Afternoon**, or **Night** shift.
 - Submitting calls `assign_roster_shift()` which uses `Roster.objects.update_or_create()`.
+- Selecting `-- Remove Shift --` deletes the roster entry for that employee on that date.
 
 **Department Filter:**
-- A tab/dropdown allows filtering the entire dashboard view by department.
+- A tab/dropdown allows filtering the entire dashboard view by department. Defaults to **All Departments**.
 
 **Export Attendance CSV:**
-- The **Export CSV** button (`/manager/export/`) downloads a spreadsheet with:  
+- The **Export CSV** button (`/manager/export/`) downloads a spreadsheet with:
   `Employee ID, First Name, Last Name, Department, Rostered Shift, Work Status, Work Mode, Check-in Time, Check-out Time, Hours Worked`
 
 **IT Support Ticket Panel (conditional):**
-- If the logged-in user has `can_raise_support = True` (superuser or granted via Developer page), a panel listing all open support tickets is shown at the bottom.
+- If the logged-in user has `can_raise_support = True` (superuser or granted via Developer page), a panel listing all open support tickets is shown at the bottom of the dashboard.
 
 **Employee Management Controls:**
-- Links to Add, Edit, and Delete employees (soft-delete, not hard-delete).
+- Links to Add, Edit, and Delete employees (soft-delete — `is_active = False`, not hard-delete).
 
 ---
 
 ### 5. Add / Edit / Delete Employee
 
-**URL (Add):** `/manager/add/`  
-**URL (Edit):** `/manager/edit/<id>/`  
-**URL (Delete):** `/manager/delete/<id>/`  
-**Templates:** [`student_form.html`](attendance/templates/attendance/student_form.html), [`student_confirm_delete.html`](attendance/templates/attendance/student_confirm_delete.html)  
+**URL (Add):** `/manager/add/`
+**URL (Edit):** `/manager/edit/<id>/`
+**URL (Delete):** `/manager/delete/<id>/`
+**Templates:** [`student_form.html`](attendance/templates/attendance/student_form.html), [`student_confirm_delete.html`](attendance/templates/attendance/student_confirm_delete.html)
 **Views:** `add_employee()`, `edit_employee()`, `delete_employee()` *(all login required)*
 
-- **Add/Edit** uses `EmployeeForm` from [`attendance/forms.py`](attendance/forms.py), capturing name, department, avatar emoji, avatar color, and 4-digit PIN.
-- **Delete** is a **soft delete** — sets `employee.is_active = False` rather than removing the database record. This preserves historical attendance records.
+- **Add/Edit** uses `EmployeeForm` from [`attendance/forms.py`](attendance/forms.py), capturing:
+  - First Name, Last Name
+  - Department (from active `DepartmentOption` records)
+  - Avatar Emoji (from active `AvatarEmoji` records)
+  - Avatar Color (from active `AvatarColor` records)
+  - 4-digit PIN code (validated with `RegexValidator`)
+- **Delete** is a **soft delete** — sets `employee.is_active = False` rather than removing the database record. This preserves all historical attendance and roster records for that employee.
+- All three views require manager login.
 
 ---
 
 ### 6. IT Support Portal — Client Side
 
-**URL (Home):** `/support/`  
-**URL (Ticket View):** `/support/ticket/<TKT######>/`  
-**Templates:** [`support_home.html`](attendance/templates/attendance/support_home.html), [`support_ticket_detail.html`](attendance/templates/attendance/support_ticket_detail.html)  
+**URL (Home):** `/support/`
+**URL (Ticket View):** `/support/ticket/<TKT######>/`
+**Templates:** [`support_home.html`](attendance/templates/attendance/support_home.html), [`support_ticket_detail.html`](attendance/templates/attendance/support_ticket_detail.html)
 **Views:** `support_home()`, `support_ticket_view()`
 
-> **Access:** Requires manager login **and** `EmployeeSupportPermission.can_raise_tickets = True` (or superuser).
+> **Access:** Requires manager login **and** `EmployeeSupportPermission.can_raise_tickets = True` (or superuser). Permission is granted/revoked via the Developer Customizer page.
 
-**Features:**
-- **Raise a Ticket** — Form to submit a help desk ticket with caller name, subject, description, and priority (Low / Moderate / High / Critical).
-- **Ticket Search** — Search by ticket number (e.g., `TKT100001`) to quickly look up status.
-- **Ticket List** — All existing tickets with state badges (New / In Progress / On Hold / Resolved / Closed).
-- **Ticket Detail** — View full ticket info, activity timeline, and add customer comments.
+**Support Home Features:**
+- **Raise a Ticket** — A form to submit a new help desk ticket with:
+  - Caller Name
+  - Subject
+  - Description (detailed issue)
+  - Priority: Low / Moderate / High / Critical
+  - Ticket number is auto-generated in the format `TKT100001`, `TKT100002`, etc.
+- **Ticket Search** — Search by ticket number (e.g., `TKT100001`) to quickly look up a specific ticket's current status.
+- **Ticket List** — All existing tickets displayed with state badges: New / In Progress / On Hold / Resolved / Closed.
+
+**Ticket Detail Page (`/support/ticket/<number>/`):**
+- Displays full ticket information: caller, priority, state, assignment group, assigned engineer, logged date/time.
+- **Activity Stream** — Shows all **Customer Comments** posted on the ticket (Work Notes posted by engineers are internal-only and not shown here).
+- **Send a Reply** — The client can post follow-up comments or additional information directly from this page. The comment is stored as a `TicketActivity` of type `customer_comment`.
 
 ---
 
 ### 7. IT Support Engineer Console
 
-**URL (Login):** `/support/engineer/login/`  
-**URL (Dashboard):** `/support/engineer/`  
-**URL (Ticket Detail):** `/support/engineer/ticket/<TKT######>/`  
-**URL (Logout):** `/support/engineer/logout/`  
-**Templates:** [`engineer_login.html`](attendance/templates/attendance/support/engineer_login.html), [`engineer_dashboard.html`](attendance/templates/attendance/support/engineer_dashboard.html), [`engineer_ticket_detail.html`](attendance/templates/attendance/support/engineer_ticket_detail.html), [`engineer_logout.html`](attendance/templates/attendance/support/engineer_logout.html)  
+**URL (Login):** `/support/engineer/login/`
+**URL (Dashboard):** `/support/engineer/`
+**URL (Ticket Detail):** `/support/engineer/ticket/<TKT######>/`
+**URL (Logout):** `/support/engineer/logout/`
+**Templates:**
+- [`engineer_login.html`](attendance/templates/attendance/support/engineer_login.html)
+- [`engineer_dashboard.html`](attendance/templates/attendance/support/engineer_dashboard.html)
+- [`engineer_ticket_detail.html`](attendance/templates/attendance/support/engineer_ticket_detail.html)
+- [`engineer_logout.html`](attendance/templates/attendance/support/engineer_logout.html)
+
 **Views:** `engineer_login_view()`, `engineer_dashboard()`, `engineer_ticket_detail()`, `engineer_logout_view()`
 
-> **Access:** Engineers log in with their email + password via a separate session (`request.session['engineer_id']`), independent of the manager Django auth.
+> **Access:** Engineers log in with their email + password (stored in `SupportEngineer` model) via a separate session key (`request.session['engineer_id']`), completely independent of the manager Django auth system.
+
+**Engineer Login:**
+- Engineers enter their registered email and password.
+- On success, `engineer_id` is stored in the Django session.
+- On logout, the session key is cleared.
 
 **Engineer Dashboard Features:**
-- Lists all support tickets with filter controls by **Assignment Group**, **State**, and **Priority**.
-- SLA status badge on each ticket (🟢 Active / 🟡 Warning / 🔴 Breached / ✅ Met).
-- Ticket count summary pills by state.
+- Lists all support tickets with dynamic filter controls:
+  - Filter by **Assignment Group**
+  - Filter by **State** (New / In Progress / On Hold / Resolved / Closed)
+  - Filter by **Priority** (Low / Moderate / High / Critical)
+- **SLA status badge** on each ticket:
+  - 🟢 `Active` — SLA timer running, plenty of time remaining
+  - 🟡 `Warning` — SLA timer running but less than 25% of the window remains
+  - 🔴 `Breached` — SLA deadline passed while ticket is still open
+  - ✅ `Met` — Ticket resolved/closed before SLA deadline
+- Ticket count summary pills grouped by state at the top of the dashboard.
 
-**Ticket Detail Features:**
-- Full ticket lifecycle management: update **state**, **priority**, **assigned engineer**, **assignment group**.
-- Add **Work Notes** (internal only — not visible to the client).
-- Add **Customer Comments** (visible to both engineer and client).
-- SLA timer display showing time remaining or breach duration.
-- Full activity log timeline.
+**Ticket Detail Features (Engineer View):**
+- Full ticket lifecycle management:
+  - Update **State** (New → In Progress → On Hold → Resolved → Closed)
+  - Update **Priority**
+  - Assign to a **specific Engineer**
+  - Change **Assignment Group**
+- **Add Work Notes** (internal only — not visible on the client portal).
+- **Add Customer Comments** (visible to both engineer and client on the client portal).
+- **SLA Timer Display** — Shows remaining time or how long ago the SLA was breached.
+- **Full Activity Log Timeline** — Chronological list of all work notes and customer comments.
 
 **Engineer CRUD (Identity Manager sub-pages):**
-- `/support/engineer/list/` — List all engineers.
-- `/support/engineer/create/` — Create a new engineer account.
+- `/support/engineer/list/` — List all engineers with their group memberships.
+- `/support/engineer/create/` — Create a new engineer account (name, email, password, group assignments).
 - `/support/engineer/edit/<id>/` — Edit engineer details.
-- `/support/engineer/delete/<id>/` — Delete engineer (with confirmation).
+- `/support/engineer/delete/<id>/` — Delete engineer account (with confirmation page).
 
 **Group CRUD:**
-- `/support/group/list/` — List assignment groups.
-- `/support/group/create/` — Create new group (e.g., "L2 Support Team").
-- `/support/group/edit/<id>/` — Edit group.
-- `/support/group/delete/<id>/` — Delete group.
+- `/support/group/list/` — List all assignment groups.
+- `/support/group/create/` — Create a new assignment group (e.g., "L2 Support Team", "Network Team").
+- `/support/group/edit/<id>/` — Edit group name/description.
+- `/support/group/delete/<id>/` — Delete group (with confirmation page).
 
 ---
 
 ### 8. Engineer Identity Manager
 
-**URL:** `/support/engineer/identity/`  
-**Template:** [`identity_manager.html`](attendance/templates/attendance/support/identity_manager.html)  
+**URL:** `/support/engineer/identity/`
+**Template:** [`identity_manager.html`](attendance/templates/attendance/support/identity_manager.html)
 **View:** `identity_manager()`
 
-A unified admin panel for the IT Support infrastructure:
-- **Toggle engineer active/inactive status.**
-- **Assign/remove engineers from assignment groups.**
-- **Grant or revoke support-ticket-raising permissions** for manager users.
-- View a full list of all engineers with their group memberships.
+A unified administration panel for the IT Support infrastructure that lets admins:
+
+- **View all engineers** with their current active/inactive status and group memberships.
+- **Toggle engineer active/inactive status** — deactivated engineers cannot log in.
+- **Assign or remove engineers from assignment groups** — each engineer can belong to multiple groups (ManyToMany relationship).
+- **Grant or revoke support-ticket-raising permissions** for manager/staff users — controls which portal users see the IT Support option in the Manager Dashboard.
+- Full tabular view of group-to-engineer mappings.
 
 ---
 
 ### 9. Leoxur Mails & Chat Communication Suite
 
-**URL (Dashboard):** `/leoxur-comm/`  
-**URL (Auth):** `/leoxur-comm/auth/`  
-**URL (Logout):** `/leoxur-comm/logout/`  
-**URL (Data API):** `/leoxur-comm/data/`  
-**Template:** [`leoxur_comm.html`](attendance/templates/attendance/leoxur_comm.html)  
-**Stylesheet:** [`static/css/leoxur_comm.css`](static/css/leoxur_comm.css)  
+**URL (Dashboard):** `/leoxur-comm/`
+**URL (Auth):** `/leoxur-comm/auth/`
+**URL (Logout):** `/leoxur-comm/logout/`
+**URL (Data API):** `/leoxur-comm/data/`
+**Template:** [`leoxur_comm.html`](attendance/templates/attendance/leoxur_comm.html)
+**Stylesheet:** [`static/css/leoxur_comm.css`](static/css/leoxur_comm.css)
 **Views:** `leoxur_comm_dashboard()`, `leoxur_comm_auth()`, `leoxur_comm_logout()`, `leoxur_comm_data()`
 
-A fully integrated internal communication hub styled as a modern messaging app.
+A fully integrated internal communication hub styled as a modern messaging app with three core modules.
 
 **Authentication:**
-- Users log in as one of three roles: **Employee**, **Manager**, or **Engineer**, mapped to user IDs (e.g., `employee_1`, `manager_1`, `engineer_2`).
-- Session stored as `leoxur_user_id`.
+- Users log in by selecting their role and ID:
+  - **Employee** — e.g., `employee_1`, `employee_2`
+  - **Manager** — e.g., `manager_1`
+  - **Engineer** — e.g., `engineer_1`, `engineer_2`
+- Session is stored as `leoxur_user_id` in the Django session. Separate from manager and engineer auth.
 
-**Three Core Modules:**
+---
 
 #### 📧 Mails (Internal Email)
-- Compose and send internal emails to any registered user.
-- Inbox/Sent/All views.
-- Mark emails as read.
-- API endpoints: `/leoxur-comm/send-email/`, `/leoxur-comm/read-email/`
-- Backed by `LeoxurEmail` model.
+
+- Compose and send internal emails to any registered user across all roles.
+- **Inbox / Sent / All** views to organize email.
+- Mark emails as read (updates `LeoxurEmail.is_read` flag).
+- API Endpoints:
+  - `POST /leoxur-comm/send-email/` — Send an internal email.
+  - `POST /leoxur-comm/read-email/` — Mark an email as read.
+- Backed by the `LeoxurEmail` model.
+
+---
 
 #### 💬 Chat (Team Channels + Direct Messages)
-- **Channel rooms**: `#general`, `#support`, `#managers`, `#announcements`
-- **Direct Messages**: User-to-user DMs.
-- Real-time-style chat UI (AJAX polling).
-- Message threading / replies support (`parent_message` FK).
-- API endpoint: `/leoxur-comm/send-chat/`
-- Backed by `LeoxurMessage` model.
+
+- **Channel rooms** (group chats):
+  - `#general` — Company-wide announcements and discussion
+  - `#support` — IT support coordination
+  - `#managers` — Management-only channel
+  - `#announcements` — Broadcast announcements
+- **Direct Messages** — One-to-one user messages (any user to any other user).
+- Real-time-style chat UI with **AJAX polling** for new messages.
+- **Message threading / replies** — Messages can have a `parent_message` FK for threaded replies.
+- API Endpoints:
+  - `POST /leoxur-comm/send-chat/` — Send a chat message to a channel or DM.
+  - `GET /leoxur-comm/data/` — Poll for new messages, emails, and task updates.
+- Backed by the `LeoxurMessage` model.
+
+---
 
 #### ✅ Tasks (Kanban Task Board)
-- Create tasks with title, description, priority (Low / Medium / High / Highest), and status (Backlog / In Progress / In Review / Done / Archived).
-- Assign tasks to other users.
-- Comment on tasks.
-- Kanban board view grouped by status.
-- API endpoints: `/leoxur-comm/create-task/`, `/leoxur-comm/update-task/`, `/leoxur-comm/delete-task/`, `/leoxur-comm/add-task-comment/`
+
+- Create task cards with:
+  - **Title** and **Description**
+  - **Priority**: Low / Medium / High / Highest
+  - **Status**: Backlog / In Progress / In Review / Done / Archived
+  - **Assignee** — Assign a task to any user in the system
+- Comment on tasks for discussion and updates.
+- **Kanban board view** — Tasks grouped visually by status column.
+- API Endpoints:
+  - `POST /leoxur-comm/create-task/` — Create a new task.
+  - `POST /leoxur-comm/update-task/` — Update task status or priority.
+  - `POST /leoxur-comm/delete-task/` — Delete a task.
+  - `POST /leoxur-comm/add-task-comment/` — Add a comment to a task.
 - Backed by `LeoxurTask` and `LeoxurTaskComment` models.
 
 ---
 
 ### 10. Developer / Admin Customizer Page
 
-**URL:** `/manager/developer/`  
-**Template:** [`attendance/developer_page.html`](attendance/templates/attendance/developer_page.html)  
-**Views:** `admin_developer_page()`, `save_layout()`, `ai_chat_command()`  
-**Access:** Superuser / staff only.
+**URL:** `/manager/developer/`
+**Template:** [`attendance/developer_page.html`](attendance/templates/attendance/developer_page.html)
+**Views:** `admin_developer_page()`, `save_layout()`, `ai_chat_command()`
+**Access:** Superuser / staff accounts only (redirects regular managers with an error).
 
 **Features:**
-- **Layout Block Manager** — Drag-and-drop (or command-driven) reordering of the kiosk page blocks: `Branding Header`, `Department Selection Tabs`, `Roster Stats Banner`, `Employee Roster Grid`.
-  - Toggle block visibility (show/hide).
-  - Drag to reorder, saved via `save_layout()` API.
-- **AI Chat Command Interface** — Type natural language commands such as:
+
+#### Layout Block Manager
+- Displays all 4 kiosk page layout blocks:
+  - `Branding Header` (`header`)
+  - `Department Selection Tabs` (`classroom_tabs`)
+  - `Roster Stats Banner` (`stats_banner`)
+  - `Employee Roster Grid` (`student_grid`)
+- **Drag-and-drop reordering** — drag blocks to change their display order on the kiosk page.
+- **Toggle visibility** — show or hide individual blocks.
+- Changes are saved immediately via `POST /manager/developer/save/` (AJAX, returns JSON).
+- Block state is persisted in the `AppLayoutBlock` database table. If the table is empty, defaults are auto-seeded on first access.
+
+#### AI Chat Command Interface
+- Type natural language commands to control the kiosk layout:
   - `"hide the stats banner"` → Hides `stats_banner` block.
-  - `"move student grid to top"` → Reorders `student_grid` to position 1.
-  - `"reset layout"` → Restores default order and visibility.
-  - Optionally powered by **Gemini 2.5 Flash API** (enter API key in the UI). Falls back to offline keyword parsing if no key is provided.
-- **Support Ticket Permissions** — A table of all manager users with a toggle to grant or revoke their ability to raise IT support tickets.
+  - `"move student grid to top"` → Moves `student_grid` to order position 1.
+  - `"show department tabs"` → Makes `classroom_tabs` visible again.
+  - `"reset layout"` → Restores all blocks to default order and visibility.
+- **Powered by Gemini 2.5 Flash API** — enter your API key in the UI for full natural language understanding.
+- **Offline fallback** — if no API key is provided, keyword-based parsing handles common commands automatically (no external dependency required).
+- Command endpoint: `POST /manager/developer/chat/` (returns JSON with the action taken and a friendly reply).
+
+#### Support Ticket Permissions
+- A table listing all Django manager/staff user accounts.
+- **Toggle switch** to grant or revoke each user's ability to raise IT support tickets.
+- Superusers always have access regardless of this setting.
+- Changes are saved via a form POST to the same URL.
+
+---
+
+### 11. Django Admin Panel
+
+**URL:** `/admin/`
+**Access:** Superuser accounts only (Django's built-in admin authentication).
+
+The Django Admin panel provides direct database-level management for all registered models. This is a power-user tool for administrators and developers. Registered admin interfaces include:
+
+| Model | Admin Capabilities |
+|-------|--------------------|
+| `DepartmentOption` | Add/edit/delete departments; toggle active, reorder inline |
+| `AvatarEmoji` | Manage emoji choices; toggle active, reorder |
+| `AvatarColor` | Manage color hex choices; toggle active, reorder |
+| `Employee` | Full CRUD; filter by department and active status |
+| `Roster` | View/edit all shift assignments; filter by date, shift, department |
+| `Attendance` | View/edit all check-in/out logs; filter by status, work mode, date |
+| `EmployeeSupportPermission` | Toggle support-ticket permission per user |
+| `AssignmentGroup` | Manage IT support assignment groups |
+| `SupportEngineer` | Manage engineer accounts; toggle active status |
+| `SupportTicket` | View/edit all tickets; filter by state, priority, date |
+| `TicketActivity` | View work notes and customer comments per ticket |
+| `LeoxurEmail` | View all internal emails; filter by read status |
+| `LeoxurMessage` | View all chat messages; filter by room and type |
+| `LeoxurTask` | View all tasks; filter by status, priority, creator |
+
+> **Usage Tip:** Use the Admin panel to directly seed `AssignmentGroup` records for IT support before engineers can be assigned to groups.
 
 ---
 
@@ -377,6 +523,7 @@ A fully integrated internal communication hub styled as a modern messaging app.
 | `/leoxur-comm/update-task/` | `leoxur_update_task` | Update task status/priority |
 | `/leoxur-comm/delete-task/` | `leoxur_delete_task` | Delete task |
 | `/leoxur-comm/add-task-comment/` | `leoxur_create_task_comment` | Add task comment |
+| `/admin/` | Django Admin | Database-level administration |
 
 ---
 
@@ -423,6 +570,8 @@ python manage.py runserver
 ```
 
 Open `http://127.0.0.1:8000/` in your browser.
+
+> **Timezone Note:** The application is configured for **Asia/Kolkata (IST, UTC+5:30)** in `settings.py`. All shift times, attendance timestamps, and SLA calculations use this timezone. Update `TIME_ZONE` in `employee_attendance/settings.py` if deploying in a different region.
 
 ---
 
@@ -487,8 +636,8 @@ Open `http://localhost:8000/` in your browser.
 ### Prerequisites (All Providers)
 - A Linux VM (Ubuntu 22.04 LTS recommended).
 - Inbound ports **22 (SSH)** and **80 (HTTP)** open in the firewall / security group.
-- Docker and Docker Compose installed (see step 3 for each provider).
-- Git access to the repository.
+- Docker and Docker Compose installed (see Step 3 for each provider below).
+- Git access to the repository (`git clone` or SSH key configured).
 
 ---
 
@@ -497,14 +646,17 @@ Open `http://localhost:8000/` in your browser.
 #### Step 1 — Launch an EC2 Instance
 1. Go to **AWS Console → EC2 → Launch Instance**.
 2. Choose **Ubuntu Server 22.04 LTS** as the AMI.
-3. Choose an instance type — `t3.micro` is sufficient for small teams; use `t3.small` or higher for larger organizations.
-4. Create or select an existing **SSH key pair** (`.pem` file).
+3. Choose an instance type:
+   - `t3.micro` — sufficient for small teams (≤ 50 employees)
+   - `t3.small` — recommended for medium organizations (50–200 employees)
+4. Create or select an existing **SSH key pair** (`.pem` file). Save it securely.
 5. In **Security Groups**, add inbound rules:
-   - **SSH (Port 22)** — from your organization's IP.
-   - **HTTP (Port 80)** — from `0.0.0.0/0` (all).
+   - **SSH (Port 22)** — restrict to your organization's IP range (e.g., `203.x.x.x/32`).
+   - **HTTP (Port 80)** — from `0.0.0.0/0` (all) to allow browser access.
 
 #### Step 2 — Connect via SSH
 ```bash
+chmod 400 your-key.pem
 ssh -i "your-key.pem" ubuntu@<EC2-PUBLIC-IP>
 ```
 
@@ -518,21 +670,48 @@ sudo usermod -aG docker ubuntu
 # Log out and reconnect to apply group permissions
 exit
 ssh -i "your-key.pem" ubuntu@<EC2-PUBLIC-IP>
+
+# Verify Docker is working
+docker --version
+docker-compose --version
 ```
 
-#### Step 4 — Deploy the Application
+#### Step 4 — Clone & Deploy the Application
 ```bash
 git clone https://github.com/leoxurDev/EmployeeManagementTool.git
 cd EmployeeManagementTool
 
+# Build and start the container in the background
 docker-compose up --build -d
+
+# Verify the container is running
+docker-compose ps
+```
+
+#### Step 5 — Initialize the Database
+```bash
+# Apply all database migrations
 docker-compose exec web python manage.py migrate
+
+# Seed default departments, avatar emojis, and avatar colors
 docker-compose exec web python manage.py seed_configurations
+
+# (Optional) Load sample employees and attendance data for testing
 docker-compose exec web python seed_data.py
+
+# Create the first superuser (admin) account
 docker-compose exec web python manage.py createsuperuser
 ```
 
-#### Step 5 — Access the Portal
+#### Step 6 — Set Up IT Support Groups (First Time Only)
+```bash
+# Access the Django admin at http://<EC2-PUBLIC-IP>/admin/
+# Log in with your superuser credentials
+# Navigate to: Attendance → Assignment Groups → Add
+# Create your IT support groups (e.g., "L2 Support", "Network Team", "Infrastructure")
+```
+
+#### Step 7 — Access the Portal
 Open `http://<EC2-PUBLIC-IP>/` in your browser.
 
 ---
@@ -540,15 +719,20 @@ Open `http://<EC2-PUBLIC-IP>/` in your browser.
 ### 2. Azure Virtual Machine Deployment
 
 #### Step 1 — Create an Azure VM
-1. Go to **Azure Portal → Virtual Machines → Create**.
+1. Go to **Azure Portal → Virtual Machines → Create → Azure Virtual Machine**.
 2. Choose **Ubuntu Server 22.04 LTS** as the image.
-3. Set size to `Standard_B1s` (small teams) or `Standard_B2s` (larger).
-4. Configure **SSH public key** authentication.
-5. Under **Inbound port rules**, allow **SSH (22)** and **HTTP (80)**.
+3. Set size to:
+   - `Standard_B1s` — small teams
+   - `Standard_B2s` — larger organizations
+4. Under **Administrator account**, choose **SSH public key** authentication.
+   - If you don't have an SSH key pair, Azure can generate one for you. Download and save it.
+5. Under **Inbound port rules**, allow:
+   - **SSH (22)** — your organization's IP
+   - **HTTP (80)** — from all (`*`)
 
 #### Step 2 — Connect via SSH
 ```bash
-ssh azureuser@<AZURE-VM-IP>
+ssh -i your-azure-key.pem azureuser@<AZURE-VM-PUBLIC-IP>
 ```
 
 #### Step 3 — Install Docker & Docker Compose
@@ -559,23 +743,30 @@ sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -aG docker azureuser
 exit
-ssh azureuser@<AZURE-VM-IP>
+ssh -i your-azure-key.pem azureuser@<AZURE-VM-PUBLIC-IP>
+
+# Verify
+docker --version
 ```
 
-#### Step 4 — Deploy the Application
+#### Step 4 — Clone & Deploy the Application
 ```bash
 git clone https://github.com/leoxurDev/EmployeeManagementTool.git
 cd EmployeeManagementTool
-
 docker-compose up --build -d
+docker-compose ps
+```
+
+#### Step 5 — Initialize the Database
+```bash
 docker-compose exec web python manage.py migrate
 docker-compose exec web python manage.py seed_configurations
-docker-compose exec web python seed_data.py
+docker-compose exec web python seed_data.py         # Optional
 docker-compose exec web python manage.py createsuperuser
 ```
 
-#### Step 5 — Access the Portal
-Open `http://<AZURE-VM-IP>/` in your browser.
+#### Step 6 — Access the Portal
+Open `http://<AZURE-VM-PUBLIC-IP>/` in your browser.
 
 ---
 
@@ -583,14 +774,19 @@ Open `http://<AZURE-VM-IP>/` in your browser.
 
 #### Step 1 — Create a VM Instance
 1. Go to **GCP Console → Compute Engine → VM Instances → Create Instance**.
-2. Choose machine type `e2-small` (recommended) or `e2-micro` (minimal).
-3. In **Boot Disk**, select **Ubuntu 22.04 LTS**.
-4. Under **Firewall**, check **Allow HTTP traffic**.
+2. Choose machine type:
+   - `e2-micro` — minimal (free tier eligible)
+   - `e2-small` — recommended for production
+3. In **Boot Disk**, click **Change** and select **Ubuntu 22.04 LTS**.
+4. Under **Firewall**, check both:
+   - ✅ **Allow HTTP traffic**
 
 #### Step 2 — Connect via SSH
 ```bash
+# Using gcloud CLI:
 gcloud compute ssh <INSTANCE-NAME> --zone=<ZONE>
-# Or use the SSH button in the GCP Console
+
+# Or click the "SSH" button directly in the GCP Console browser UI
 ```
 
 #### Step 3 — Install Docker & Docker Compose
@@ -603,28 +799,37 @@ sudo usermod -aG docker $USER
 exit
 # Reconnect
 gcloud compute ssh <INSTANCE-NAME> --zone=<ZONE>
+
+# Verify
+docker --version
 ```
 
-#### Step 4 — Deploy the Application
+#### Step 4 — Clone & Deploy the Application
 ```bash
 git clone https://github.com/leoxurDev/EmployeeManagementTool.git
 cd EmployeeManagementTool
-
 docker-compose up --build -d
+docker-compose ps
+```
+
+#### Step 5 — Initialize the Database
+```bash
 docker-compose exec web python manage.py migrate
 docker-compose exec web python manage.py seed_configurations
-docker-compose exec web python seed_data.py
+docker-compose exec web python seed_data.py         # Optional
 docker-compose exec web python manage.py createsuperuser
 ```
 
-#### Step 5 — Access the Portal
+#### Step 6 — Access the Portal
 Open `http://<GCP-EXTERNAL-IP>/` in your browser.
+
+> **GCP Note:** If you cannot access port 80, verify that your VPC network has a firewall rule allowing TCP ingress on port 80. Go to **VPC Network → Firewall → Create Firewall Rule** and add port 80 if missing.
 
 ---
 
 ## 🔄 Updating an Existing Live Deployment
 
-Use these steps whenever code changes are pushed to the repository and you need to update the running production server.
+Use these steps whenever code changes are pushed to the repository and you need to update the running production server — without losing any data.
 
 ```bash
 # 1. SSH into the server
@@ -637,14 +842,16 @@ cd EmployeeManagementTool
 git pull origin main
 
 # 4. Rebuild and restart Docker containers
-#    (--build rebuilds the image; --no-deps avoids rebuilding dependencies unless changed)
+#    --build rebuilds the Docker image with the new code
+#    -d runs it in the background (detached)
 docker-compose up --build -d
 
 # 5. Apply any new database migrations
+#    (safe to run even if no new migrations exist)
 docker-compose exec web python manage.py migrate
 
 # 6. Re-run seed_configurations ONLY if new departments/avatars/colors were added
-#    (safe to re-run — it skips existing records)
+#    (safe to re-run — uses get_or_create, skips existing records)
 docker-compose exec web python manage.py seed_configurations
 
 # 7. Verify the application is running correctly
@@ -655,10 +862,41 @@ docker-compose logs web --tail=50
 Open the server's public IP in your browser to confirm the update is live.
 
 ### ⚠️ Important Notes for Updates
-- **Database:** The `db.sqlite3` file is mounted as a Docker volume (`./db.sqlite3:/app/db.sqlite3`), so it persists across container restarts and rebuilds. **Never delete it on the server.**
-- **Migrations:** Always run `migrate` after a code update. If models changed, new migration files will be in `attendance/migrations/` — these are applied automatically.
-- **Static Files:** `collectstatic` runs automatically during the Docker image build step (`RUN python manage.py collectstatic --noinput` in `Dockerfile`), so no manual action is needed.
-- **Zero-Downtime:** For true zero-downtime deployments, consider using `docker-compose up -d --no-deps --build web` to rebuild only the `web` service.
+
+| Concern | Detail |
+|---------|--------|
+| **Database persistence** | `db.sqlite3` is mounted as a Docker volume (`./db.sqlite3:/app/db.sqlite3`). It persists across all rebuilds. **Never delete it on the server.** |
+| **Migrations** | Always run `migrate` after pulling new code. New migration files in `attendance/migrations/` are applied automatically. |
+| **Static files** | `collectstatic` runs automatically during the Docker image build (`RUN python manage.py collectstatic --noinput` in `Dockerfile`). No manual action needed. |
+| **Zero-downtime** | For minimal downtime, use `docker-compose up -d --no-deps --build web` to rebuild only the `web` service without restarting dependencies. |
+| **Rollback** | If an update causes issues, run `git revert HEAD` followed by `docker-compose up --build -d` to roll back to the previous version. |
+| **Timezone changes** | If `TIME_ZONE` in `settings.py` is changed, existing timestamps in the database are stored in UTC — only the display timezone changes. No data migration is needed. |
+
+---
+
+## 🔐 Production Security Checklist
+
+Before going live, ensure the following settings are reviewed in [`employee_attendance/settings.py`](employee_attendance/settings.py):
+
+| Setting | Current Value | Recommended for Production |
+|---------|--------------|---------------------------|
+| `DEBUG` | `True` | **Set to `False`** |
+| `SECRET_KEY` | Insecure placeholder | **Generate a new secret key** |
+| `ALLOWED_HOSTS` | `['*']` | **Set to your server's IP or domain** |
+
+**Generate a new SECRET_KEY:**
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+**Recommended production settings block:**
+```python
+DEBUG = False
+SECRET_KEY = '<your-new-secret-key>'
+ALLOWED_HOSTS = ['your-domain.com', 'your-server-ip']
+```
+
+> **Note:** When `DEBUG = False`, Django stops serving static files itself. WhiteNoise (already configured) handles this automatically — no additional web server configuration is needed.
 
 ---
 
@@ -708,7 +946,7 @@ EmployeeManagementTool/
 │   │       ├── support_home.html        # IT support client portal
 │   │       ├── support_ticket_detail.html
 │   │       └── support/
-│   │           ├── support_base.html
+│   │           ├── support_base.html    # Base layout for support pages
 │   │           ├── engineer_login.html
 │   │           ├── engineer_logout.html
 │   │           ├── engineer_dashboard.html
@@ -720,30 +958,30 @@ EmployeeManagementTool/
 │   │           ├── group_list.html
 │   │           ├── group_form.html
 │   │           └── group_confirm_delete.html
-│   ├── admin.py                         # Django admin registrations
+│   ├── admin.py                         # Django admin registrations (all 13 models)
 │   ├── apps.py
 │   ├── forms.py                         # EmployeeForm
-│   ├── models.py                        # All database models
+│   ├── models.py                        # All 15 database models
 │   ├── tests.py                         # Automated test suite
-│   ├── urls.py                          # URL routing
-│   └── views.py                         # All view logic
+│   ├── urls.py                          # URL routing (40+ routes)
+│   └── views.py                         # All view logic (~1800 lines)
 ├── employee_attendance/
-│   ├── settings.py                      # Django settings (context processor, whitenoise)
-│   ├── urls.py                          # Root URL dispatcher
+│   ├── settings.py                      # Django settings (context processor, whitenoise, IST timezone)
+│   ├── urls.py                          # Root URL dispatcher (includes /admin/)
 │   └── wsgi.py
 ├── static/
 │   ├── css/
 │   │   ├── employee_theme.css           # Main portal theme
 │   │   ├── servicenow_theme.css         # IT support portal theme
-│   │   └── leoxur_comm.css             # Comm suite theme
+│   │   └── leoxur_comm.css              # Comm suite theme
 │   └── js/
 │       └── employee_attendance.js       # All frontend JS logic
-├── Dockerfile                           # Docker image definition
-├── docker-compose.yml                   # Docker Compose service config
+├── Dockerfile                           # Docker image definition (python:3.10-slim + gunicorn)
+├── docker-compose.yml                   # Docker Compose — port 80:8000, db volume mount
 ├── manage.py                            # Django management entry point
-├── requirements.txt                     # Python dependencies
+├── requirements.txt                     # Python dependencies (Django, WhiteNoise)
 ├── seed_data.py                         # Sample employee/roster/attendance seeder
-└── db.sqlite3                           # SQLite database file
+└── db.sqlite3                           # SQLite database file (DO NOT DELETE in production)
 ```
 
 ---
