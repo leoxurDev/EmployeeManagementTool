@@ -556,10 +556,13 @@ pip install -r requirements.txt
 # 4. Apply database migrations
 python manage.py migrate
 
-# 5. Create a superuser manager account
+# 5. Seed the required default configuration data
+python manage.py seed_configurations
+
+# 6. Create a superuser manager account
 python manage.py createsuperuser
 
-# 6. Run the development server
+# 7. Run the development server
 APP_NAME="Acme Corp" python manage.py runserver
 ```
 
@@ -578,12 +581,13 @@ If you want to start from a completely fresh database file:
 ```bash
 rm db.sqlite3
 python manage.py migrate
+python manage.py seed_configurations
 python manage.py createsuperuser
 ```
 
 > On Windows, use `del db.sqlite3` instead of `rm db.sqlite3`.
 
-> **No seed data needed.** The application starts with a clean empty database. After logging in at `/admin/`, add your departments, avatar emojis, and avatar colors. Then log in at `/manager/login/` to start adding employees.
+> **Required setup step:** After running `python manage.py migrate`, run `python manage.py seed_configurations` once so the default departments, avatar emojis, and colors exist. After that, you can optionally edit them from `/admin/` if needed.
 
 > **Organization Name:** Set the `APP_NAME` environment variable to display your organization's name in the portal title, navbar, and welcome page. Replace `"Acme Corp"` with your organization's actual name.
 
@@ -602,7 +606,10 @@ docker-compose up --build -d
 # 2. Run migrations inside the container
 docker-compose exec web python manage.py migrate
 
-# 3. Create a superuser
+# 3. Seed default configuration options (departments, avatars, colors)
+docker-compose exec web python manage.py seed_configurations
+
+# 4. Create a superuser
 docker-compose exec web python manage.py createsuperuser
 ```
 
@@ -628,7 +635,10 @@ docker run -d -p 8000:8000 \
 # 3. Apply migrations
 docker exec -it employee-attendance-container python manage.py migrate
 
-# 4. Create a superuser
+# 4. Seed default configuration options (departments, avatars, colors)
+docker exec -it employee-attendance-container python manage.py seed_configurations
+
+# 5. Create a superuser
 docker exec -it employee-attendance-container python manage.py createsuperuser
 ```
 
@@ -638,7 +648,7 @@ Open `http://localhost:8000/` in your browser.
 
 ## ☁️ New Deployment Guide for the Organization
 
-> These steps cover deploying the application **from scratch** to a new cloud server. The included [`deploy.sh`](deploy.sh) script handles the full setup in one command — it **prompts for your organization name**, starts Docker, and runs migrations automatically.
+> These steps cover deploying the application **from scratch** to a new cloud server. The included [`deploy.sh`](deploy.sh) script handles the full setup in one command — it **prompts for your organization name**, starts Docker, runs migrations, and seeds the required configuration data automatically.
 
 ### ⚡ Quickstart with deploy.sh (Recommended)
 
@@ -658,8 +668,9 @@ Type your organization's name and press **Enter**. The script will:
 2. Pull the latest code from Git (if inside a git repo).
 3. Build and start Docker containers.
 4. Apply database migrations.
-5. Launch the `createsuperuser` wizard.
-6. Print the server access URL.
+5. Seed the required configuration data.
+6. Launch the `createsuperuser` wizard.
+7. Print the server access URL.
 
 > The organization name appears in the browser tab title, the navbar brand, and the portal welcome heading — everywhere throughout the application.
 
@@ -713,7 +724,7 @@ cd EmployeeManagementTool
 bash deploy.sh
 ```
 
-The script will prompt for your organization name, then automatically build containers, apply migrations, and guide you through creating the first admin account.
+The script will prompt for your organization name, then automatically build containers, apply migrations, seed the required configuration data, and guide you through creating the first admin account.
 
 #### Step 5 — Access the Portal
 Open `http://<EC2-PUBLIC-IP>/` in your browser.
@@ -760,7 +771,7 @@ cd EmployeeManagementTool
 bash deploy.sh
 ```
 
-The script will prompt for your organization name, then automatically build containers, apply migrations, and guide you through creating the first admin account.
+The script will prompt for your organization name, then automatically build containers, apply migrations, seed the required configuration data, and guide you through creating the first admin account.
 
 #### Step 5 — Access the Portal
 Open `http://<AZURE-VM-PUBLIC-IP>/` in your browser.
@@ -808,7 +819,7 @@ cd EmployeeManagementTool
 bash deploy.sh
 ```
 
-The script will prompt for your organization name, then automatically build containers, apply migrations, and guide you through creating the first admin account.
+The script will prompt for your organization name, then automatically build containers, apply migrations, seed the required configuration data, and guide you through creating the first admin account.
 
 #### Step 5 — Access the Portal
 Open `http://<GCP-EXTERNAL-IP>/` in your browser.
@@ -840,7 +851,10 @@ docker-compose up --build -d
 #    (safe to run even if no new migrations exist)
 docker-compose exec web python manage.py migrate
 
-# 6. Verify the application is running correctly
+# 6. Seed any required configuration data again if needed
+docker-compose exec web python manage.py seed_configurations
+
+# 7. Verify the application is running correctly
 docker-compose ps
 docker-compose logs web --tail=50
 ```
@@ -853,6 +867,7 @@ Open the server's public IP in your browser to confirm the update is live.
 |---------|--------|
 | **Database persistence** | `db.sqlite3` is mounted as a Docker volume (`./db.sqlite3:/app/db.sqlite3`). It persists across all rebuilds. **Never delete it on the server.** |
 | **Migrations** | Always run `migrate` after pulling new code. New migration files in `attendance/migrations/` are applied automatically. |
+| **Configuration seeding** | Run `python manage.py seed_configurations` after migrations so the default departments, avatar emojis, and colors exist for the app to work correctly. |
 | **Static files** | `collectstatic` runs automatically during the Docker image build (`RUN python manage.py collectstatic --noinput` in `Dockerfile`). No manual action needed. |
 | **Zero-downtime** | For minimal downtime, use `docker-compose up -d --no-deps --build web` to rebuild only the `web` service without restarting dependencies. |
 | **Rollback** | If an update causes issues, run `git revert HEAD` followed by `docker-compose up --build -d` to roll back to the previous version. |

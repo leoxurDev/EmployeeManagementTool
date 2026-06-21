@@ -56,6 +56,10 @@ echo "  🗄️   Applying database migrations..."
 docker-compose exec web python manage.py migrate
 
 echo ""
+echo "  🌱  Seeding required configuration options..."
+docker-compose exec web python manage.py seed_configurations
+
+echo ""
 echo "  👤  Create the first superuser (admin) account:"
 docker-compose exec web python manage.py createsuperuser
 
