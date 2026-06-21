@@ -565,6 +565,24 @@ APP_NAME="Acme Corp" python manage.py runserver
 
 Open `http://127.0.0.1:8000/` in your browser.
 
+### Resetting / Wiping Database Data
+
+If you want to remove all records but keep the database schema and migrations:
+
+```bash
+python manage.py flush --noinput
+```
+
+If you want to start from a completely fresh database file:
+
+```bash
+rm db.sqlite3
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+> On Windows, use `del db.sqlite3` instead of `rm db.sqlite3`.
+
 > **No seed data needed.** The application starts with a clean empty database. After logging in at `/admin/`, add your departments, avatar emojis, and avatar colors. Then log in at `/manager/login/` to start adding employees.
 
 > **Organization Name:** Set the `APP_NAME` environment variable to display your organization's name in the portal title, navbar, and welcome page. Replace `"Acme Corp"` with your organization's actual name.
