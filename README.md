@@ -30,9 +30,10 @@
    - [Azure VM](#2-azure-virtual-machine-deployment)
    - [GCP Compute Engine](#3-gcp-compute-engine-deployment)
 10. [Updating an Existing Deployment](#-updating-an-existing-live-deployment)
-11. [Production Security Checklist](#-production-security-checklist)
-12. [Automated Tests](#-automated-tests)
-13. [Project File Structure](#-project-file-structure)
+11. [Migrating Database (SQLite to PostgreSQL)](#-migrating-database-sqlite-to-postgresql)
+12. [Production Security Checklist](#-production-security-checklist)
+13. [Automated Tests](#-automated-tests)
+14. [Project File Structure](#-project-file-structure)
 
 ---
 
@@ -895,6 +896,116 @@ Open the server's public IP in your browser to confirm the update is live.
 | **Rollback** | If an update causes issues, run `git revert HEAD` followed by `docker-compose up --build -d` to roll back to the previous version. |
 | **Org name change** | To change the organization name on a live deployment, edit `.env` (set `APP_NAME=New Name`), then run `docker-compose up -d` to pick up the new value. |
 | **Timezone changes** | If `TIME_ZONE` in `settings.py` is changed, existing timestamps in the database are stored in UTC — only the display timezone changes. No data migration needed. |
+
+---
+
+## 🗄 Migrating Database (SQLite to PostgreSQL)
+
+For robust production deployments, it is recommended to migrate the SQLite database to **PostgreSQL**. Since this project runs inside Docker containers, follow this step-by-step guide to migrate your active SQLite data to PostgreSQL:
+
+### Step 1 — Export Active SQLite Data
+Run Django's `dumpdata` tool to export the database content to a JSON file. Exclude the auto-seeded content types and auth permissions to avoid duplicate key violations when importing to PostgreSQL:
+```bash
+# If running inside Docker:
+docker-compose exec web python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.Permission --indent 4 > datadump.json
+
+# If running locally in a virtual environment:
+python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.Permission --indent 4 > datadump.json
+```
+
+### Step 2 — Update Python Dependencies
+Add `psycopg2-binary` (the PostgreSQL database adapter) to `requirements.txt`:
+```text
+django>=4.0
+whitenoise>=6.0.0
+psycopg2-binary>=2.9.0
+```
+Then rebuild your Docker containers:
+```bash
+docker-compose build
+```
+
+### Step 3 — Update docker-compose.yml
+Add a PostgreSQL service to your `docker-compose.yml` configuration:
+```yaml
+services:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=employee_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_secure_pass
+    restart: always
+
+  web:
+    build: .
+    ports:
+      - "80:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      - APP_NAME=${APP_NAME:-My Organization}
+      - DB_HOST=db
+      - DB_NAME=employee_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres_secure_pass
+    restart: always
+
+volumes:
+  postgres_data:
+```
+
+### Step 4 — Update DATABASES Settings
+Modify the `DATABASES` configuration in `employee_attendance/settings.py` to dynamically switch to PostgreSQL when environment configurations are present:
+```python
+import os
+
+DB_HOST = os.environ.get('DB_HOST')
+
+if DB_HOST:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'employee_db'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres_secure_pass'),
+            'HOST': DB_HOST,
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+```
+
+### Step 5 — Spin up PostgreSQL and Apply migrations
+Start your containers:
+```bash
+docker-compose up -d db
+docker-compose up -d web
+```
+Apply the empty tables schema to PostgreSQL:
+```bash
+docker-compose exec web python manage.py migrate
+```
+
+### Step 6 — Import Data
+To avoid foreign key conflicts with pre-created contenttypes, purge the default contenttypes generated during the migration step, then run `loaddata`:
+```bash
+# 1. Clear auto-generated content types
+docker-compose exec web python manage.py shell -c "from django.contrib.contenttypes.models import ContentType; ContentType.objects.all().delete()"
+
+# 2. Import your dumped SQLite data
+docker-compose exec web python manage.py loaddata datadump.json
+```
 
 ---
 
