@@ -874,6 +874,8 @@
     border-radius: 16px;
     width: 100%;
     max-width: 500px;
+    max-height: 85vh;
+    overflow-y: auto;
     padding: 2rem;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
@@ -1376,3 +1378,207 @@
     border: 2px solid var(--comm-primary) !important;
     box-shadow: inset 0 0 10px rgba(79, 70, 229, 0.1);
 }
+
+/* ==============================================================================
+   WORKSPACE FULLSCREEN & LEO CODE STYLES
+   ============================================================================== */
+
+.comm-dashboard-layout.fullscreen-active {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    z-index: 99999 !important;
+    margin: 0 !important;
+}
+
+.leonotes-layout {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--comm-bg-main);
+    color: var(--comm-text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+}
+
+.leonotes-sidebar {
+    width: 260px;
+    border-right: 1px solid var(--comm-border);
+    background-color: var(--comm-sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.leonotes-sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--comm-border);
+}
+
+.leonotes-sidebar-header span {
+    font-size: 1.1rem;
+    font-weight: 850;
+    color: var(--comm-text-main);
+}
+
+.leonotes-new-btn {
+    background: var(--comm-primary);
+    color: #fff;
+    border: none;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.leonotes-new-btn:hover {
+    background: var(--comm-primary-hover);
+}
+
+.leonotes-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.note-card {
+    padding: 0.75rem 0.85rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background-color: transparent;
+    border: 1px solid transparent;
+}
+
+.note-card:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.note-card.active {
+    background-color: var(--comm-primary);
+    color: white !important;
+}
+
+.note-card.active * {
+    color: white !important;
+}
+
+.note-card-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--comm-text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--comm-text-muted);
+}
+
+.note-card-date {
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.note-card-snippet {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leonotes-editor-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--comm-bg-card);
+    height: 100%;
+    position: relative;
+}
+
+.leonotes-empty-view {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--comm-text-muted);
+}
+
+.leonotes-empty-view h3 {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--comm-text-main);
+    margin-bottom: 0.25rem;
+}
+
+.leonotes-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--comm-border);
+    background-color: var(--comm-bg-muted);
+}
+
+#leonotes-note-title {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 1.1rem;
+    font-weight: 850;
+    color: var(--comm-text-main);
+    flex: 1;
+    padding: 0;
+    font-family: inherit;
+}
+
+.leonotes-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.save-status {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--comm-success);
+    opacity: 0.8;
+}
+
+.leonotes-textarea {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 1.25rem;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--comm-text-main);
+    background-color: transparent;
+    resize: none;
+    overflow-y: auto;
+}
+
+

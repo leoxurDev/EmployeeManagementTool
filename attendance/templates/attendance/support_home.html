@@ -36,7 +36,12 @@
                 {% csrf_token %}
                 <div class="form-group">
                     <label>Your Name / Caller:</label>
-                    <input type="text" name="caller" placeholder="e.g. Manager Jenny or Employee John" required class="form-input">
+                    <input type="text" name="caller" id="caller-input" list="caller-list" value="{{ request.user.username }}" placeholder="Search by name, email or select..." required class="form-input">
+                    <datalist id="caller-list">
+                        {% for u in all_users %}
+                            <option value="{{ u.name }} ({{ u.email }})"></option>
+                        {% endfor %}
+                    </datalist>
                 </div>
 
                 <div class="form-group">

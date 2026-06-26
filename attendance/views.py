@@ -285,8 +285,12 @@ def verify_pin(request):
 
 
 def manager_login(request):
+    from django.utils.http import url_has_allowed_host_and_scheme
+    next_url = request.GET.get('next') or request.POST.get('next') or 'teacher_dashboard'
     if request.user.is_authenticated:
-        return redirect('teacher_dashboard')
+        if not url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+            next_url = 'teacher_dashboard'
+        return redirect(next_url)
         
     employees = Employee.objects.filter(is_active=True).order_by('department', 'first_name')
     depts = DepartmentOption.objects.filter(is_active=True).order_by('order')
@@ -296,8 +300,15 @@ def manager_login(request):
         if form.is_valid():
             user = form.get_user()
             auth_login(request, user)
+            request.session['leoxur_user_id'] = f"manager_{user.id}"
+            request.session['leoxur_logged_out'] = False
+            if 'engineer_id' in request.session:
+                del request.session['engineer_id']
             messages.success(request, f"Welcome back, Manager {user.username}! 💼")
-            return redirect('teacher_dashboard')
+            next_url = request.GET.get('next') or request.POST.get('next') or 'teacher_dashboard'
+            if not url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+                next_url = 'teacher_dashboard'
+            return redirect(next_url)
         else:
             messages.error(request, "Invalid username or password. Please try again.")
     else:
@@ -544,12 +555,13 @@ def assign_roster_shift(request):
             messages.error(request, f"Failed to assign roster shift: {e}")
             
     # Redirect back, preserving date and classroom query parameters
+    from urllib.parse import quote
     redirect_url = '/manager/'
     params = []
     if date_str:
         params.append(f"roster_date={date_str}")
     if classroom:
-        params.append(f"classroom={classroom}")
+        params.append(f"classroom={quote(classroom)}")
     if params:
         redirect_url += '?' + '&'.join(params)
     return redirect(redirect_url)
@@ -898,9 +910,11 @@ def support_home(request):
             return redirect('support_ticket_view', number=ticket.number)
             
     tickets = SupportTicket.objects.all().order_by('-created_at')
+    all_users = get_all_leoxur_participants()
     
     return render(request, 'attendance/support_home.html', {
-        'tickets': tickets
+        'tickets': tickets,
+        'all_users': all_users,
     })
 
 
@@ -941,20 +955,29 @@ def support_ticket_view(request, number):
 def engineer_login_required(view_func):
     def wrapper(request, *args, **kwargs):
         if not request.session.get('engineer_id'):
-            return redirect('engineer_login')
+            from django.urls import reverse
+            login_url = reverse('engineer_login')
+            return redirect(f"{login_url}?next={request.path}")
         eng = SupportEngineer.objects.filter(pk=request.session['engineer_id'], is_active=True).first()
         if not eng:
             if 'engineer_id' in request.session:
                 del request.session['engineer_id']
             messages.error(request, "Your session is invalid or your engineer account has been deactivated.")
-            return redirect('engineer_login')
+            from django.urls import reverse
+            login_url = reverse('engineer_login')
+            return redirect(f"{login_url}?next={request.path}")
         return view_func(request, *args, **kwargs)
     return wrapper
 
 
 def engineer_login_view(request):
+    from django.utils.http import url_has_allowed_host_and_scheme
+    next_url = request.GET.get('next') or request.POST.get('next') or 'engineer_dashboard'
+    
     if request.session.get('engineer_id'):
-        return redirect('engineer_dashboard')
+        if not url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+            next_url = 'engineer_dashboard'
+        return redirect(next_url)
         
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
@@ -969,8 +992,15 @@ def engineer_login_view(request):
                     messages.error(request, "This account has been deactivated.")
                 else:
                     request.session['engineer_id'] = eng.pk
+                    request.session['leoxur_user_id'] = f"engineer_{eng.pk}"
+                    request.session['leoxur_logged_out'] = False
+                    if request.user.is_authenticated:
+                        auth_logout(request)
                     messages.success(request, f"Successfully logged in as {eng.name}.")
-                    return redirect('engineer_dashboard')
+                    next_url = request.GET.get('next') or request.POST.get('next') or 'engineer_dashboard'
+                    if not url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+                        next_url = 'engineer_dashboard'
+                    return redirect(next_url)
             else:
                 messages.error(request, "Invalid email or password.")
                 
@@ -1427,10 +1457,18 @@ def leoxur_comm_dashboard(request):
     active_user_id = request.session.get('leoxur_user_id')
     active_user = None
 
-    # Auto-login if Django user is authenticated and session is empty
-    if not active_user_id and request.user.is_authenticated:
-        active_user_id = f"manager_{request.user.id}"
-        request.session['leoxur_user_id'] = active_user_id
+    # Synchronize workspace identity with active portal user unless explicitly logged out of workspace
+    if not request.session.get('leoxur_logged_out'):
+        if request.user.is_authenticated:
+            expected_id = f"manager_{request.user.id}"
+            if active_user_id != expected_id:
+                active_user_id = expected_id
+                request.session['leoxur_user_id'] = active_user_id
+        elif request.session.get('engineer_id'):
+            expected_id = f"engineer_{request.session['engineer_id']}"
+            if active_user_id != expected_id:
+                active_user_id = expected_id
+                request.session['leoxur_user_id'] = active_user_id
         
     if active_user_id:
         active_user = get_participant_by_id(active_user_id)
@@ -1475,6 +1513,7 @@ def leoxur_comm_auth(request):
             # Check if already authenticated via Django session
             if request.user.is_authenticated and request.user.id == pk:
                 request.session['leoxur_user_id'] = user_id
+                request.session['leoxur_logged_out'] = False
                 return JsonResponse({'success': True, 'user_id': user_id})
             else:
                 u = User.objects.filter(pk=pk).first()
@@ -1486,6 +1525,7 @@ def leoxur_comm_auth(request):
                 if user is not None:
                     auth_login(request, user)
                     request.session['leoxur_user_id'] = user_id
+                    request.session['leoxur_logged_out'] = False
                     return JsonResponse({'success': True, 'user_id': user_id})
                 else:
                     return JsonResponse({'success': False, 'error': 'Invalid password.'})
@@ -1496,6 +1536,7 @@ def leoxur_comm_auth(request):
                 return JsonResponse({'success': False, 'error': 'Support Engineer not found or inactive.'})
             if eng.password == secret:
                 request.session['leoxur_user_id'] = user_id
+                request.session['leoxur_logged_out'] = False
                 return JsonResponse({'success': True, 'user_id': user_id})
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid engineer password.'})
@@ -1506,6 +1547,7 @@ def leoxur_comm_auth(request):
                 return JsonResponse({'success': False, 'error': 'Employee not found or inactive.'})
             if emp.pin_code == secret:
                 request.session['leoxur_user_id'] = user_id
+                request.session['leoxur_logged_out'] = False
                 return JsonResponse({'success': True, 'user_id': user_id})
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid PIN.'})
@@ -1519,6 +1561,7 @@ def leoxur_comm_auth(request):
 def leoxur_comm_logout(request):
     if 'leoxur_user_id' in request.session:
         del request.session['leoxur_user_id']
+    request.session['leoxur_logged_out'] = True
     return JsonResponse({'success': True})
 
 

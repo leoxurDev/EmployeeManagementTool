@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 
 
 class DepartmentOption(models.Model):
-    emoji = models.CharField(max_length=5, unique=True)
+    emoji = models.CharField(max_length=5, unique=True, blank=True, null=True)
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=100, blank=True)
     order = models.PositiveIntegerField(default=0)
@@ -18,11 +18,25 @@ class DepartmentOption(models.Model):
         verbose_name_plural = 'Department Options'
 
     def __str__(self):
-        return f"{self.emoji} {self.name}"
+        if self.emoji:
+            return f"{self.emoji} {self.name}"
+        return self.name
 
     @property
     def display_value(self):
-        return f"{self.emoji} {self.name}"
+        if self.emoji:
+            return f"{self.emoji} {self.name}"
+        return self.name
+
+    def clean(self):
+        super().clean()
+        if self.emoji == "":
+            self.emoji = None
+
+    def save(self, *args, **kwargs):
+        if self.emoji == "":
+            self.emoji = None
+        super().save(*args, **kwargs)
 
 
 class AvatarEmoji(models.Model):

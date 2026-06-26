@@ -87,6 +87,7 @@
 
             <form method="POST">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.GET.next }}">
                 <div style="display: flex; flex-direction: column; gap: 1.25rem;">
                     <div class="snow-form-group">
                         <label for="email" style="font-weight: 600; color: #475569;">Email Address</label>

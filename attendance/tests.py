@@ -170,6 +170,24 @@ class ManagerAuthenticationTests(TestCase):
         self.assertIn('students', response.context)
         self.assertIn('classrooms', response.context)
 
+    def test_manager_login_redirect_next_valid(self):
+        url = reverse('teacher_login')
+        next_url = reverse('admin_developer_page')
+        response = self.client.post(f"{url}?next={next_url}", {
+            'username': 'teacher_test',
+            'password': 'testpassword123'
+        })
+        self.assertRedirects(response, next_url, fetch_redirect_response=False)
+
+    def test_manager_login_redirect_next_invalid_host(self):
+        url = reverse('teacher_login')
+        next_url = "http://malicious.com/stolen"
+        response = self.client.post(f"{url}?next={next_url}", {
+            'username': 'teacher_test',
+            'password': 'testpassword123'
+        })
+        self.assertRedirects(response, reverse('teacher_dashboard'))
+
 
 class DeveloperCustomizerTests(TestCase):
     def setUp(self):
@@ -397,6 +415,28 @@ class TechSupportTests(TestCase):
         self.assertContains(response, 'Identity & Access Manager')
         self.assertContains(response, 'test_teacher')
         self.assertContains(response, 'Spock')
+
+    def test_engineer_login_redirect_next_valid(self):
+        self.eng_spock.password = "engineer123"
+        self.eng_spock.save()
+        url = reverse('engineer_login')
+        next_url = reverse('identity_manager')
+        response = self.client.post(f"{url}?next={next_url}", {
+            'email': self.eng_spock.email,
+            'password': 'engineer123'
+        })
+        self.assertRedirects(response, next_url, fetch_redirect_response=False)
+
+    def test_engineer_login_redirect_next_invalid_host(self):
+        self.eng_spock.password = "engineer123"
+        self.eng_spock.save()
+        url = reverse('engineer_login')
+        next_url = "http://malicious.com/stolen"
+        response = self.client.post(f"{url}?next={next_url}", {
+            'email': self.eng_spock.email,
+            'password': 'engineer123'
+        })
+        self.assertRedirects(response, reverse('engineer_dashboard'), fetch_redirect_response=False)
 
     def test_identity_manager_toggle_teacher(self):
         session = self.client.session
@@ -629,6 +669,39 @@ class LeoxurCommTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['success'])
 
+    def test_leoxur_workspace_logout_loop_prevention(self):
+        # 1. Login Django manager
+        self.client.login(username='manager_test', password='managerpassword123')
+        
+        # 2. Access dashboard - should auto-login workspace
+        url = reverse('leoxur_comm_dashboard')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session.get('leoxur_user_id'), f'manager_{self.manager_user.id}')
+        
+        # 3. Explicitly logout from workspace
+        logout_url = reverse('leoxur_comm_logout')
+        logout_response = self.client.post(logout_url)
+        self.assertEqual(logout_response.status_code, 200)
+        self.assertNotIn('leoxur_user_id', self.client.session)
+        self.assertTrue(self.client.session.get('leoxur_logged_out'))
+        
+        # 4. Access dashboard again - should NOT auto-login because of manual logout flag
+        response2 = self.client.get(url)
+        self.assertEqual(response2.status_code, 200)
+        self.assertNotIn('leoxur_user_id', self.client.session)
+        
+        # 5. Authenticating again should clear manual logout flag
+        auth_url = reverse('leoxur_comm_auth')
+        payload = {
+            'user_id': f'manager_{self.manager_user.id}',
+            'secret': 'managerpassword123'
+        }
+        auth_response = self.client.post(auth_url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(auth_response.status_code, 200)
+        self.assertFalse(self.client.session.get('leoxur_logged_out'))
+        self.assertEqual(self.client.session.get('leoxur_user_id'), f'manager_{self.manager_user.id}')
+
 
 class LeoxurWorkspaceTaskTests(TestCase):
     def setUp(self):
@@ -815,4 +888,69 @@ class LeoxurWorkspaceTaskTests(TestCase):
         
         unassigned_task.refresh_from_db()
         self.assertEqual(unassigned_task.status, 'in_progress')
+
+    def test_portal_login_overrides_workspace_profile(self):
+        session = self.client.session
+        session['leoxur_user_id'] = 'engineer_99'
+        session['engineer_id'] = 99
+        session.save()
+
+        response = self.client.post(reverse('teacher_login'), {
+            'username': self.manager_user.username,
+            'password': 'testpassword123'
+        })
+        self.assertEqual(response.status_code, 302)
+
+        self.assertEqual(self.client.session.get('leoxur_user_id'), f'manager_{self.manager_user.id}')
+        self.assertFalse(self.client.session.get('leoxur_logged_out'))
+        self.assertNotIn('engineer_id', self.client.session)
+
+
+class DepartmentOptionTests(TestCase):
+    def setUp(self):
+        self.manager_user = User.objects.create_superuser(
+            username='admin_test',
+            email='admin_test@company.com',
+            password='testpassword123'
+        )
+
+    def test_optional_emoji_in_department_option(self):
+        # 1. Create a department without emoji
+        dept1 = DepartmentOption.objects.create(name="Sales", order=10)
+        self.assertIsNone(dept1.emoji)
+        self.assertEqual(str(dept1), "Sales")
+        self.assertEqual(dept1.display_value, "Sales")
+
+        # 2. Create another department with empty string emoji
+        # clean and save should coerce empty string to None
+        dept2 = DepartmentOption.objects.create(name="Marketing", emoji="", order=11)
+        self.assertIsNone(dept2.emoji)
+        self.assertEqual(str(dept2), "Marketing")
+        self.assertEqual(dept2.display_value, "Marketing")
+
+        # 3. Create a third department with an actual emoji
+        dept3 = DepartmentOption.objects.create(name="HR", emoji="🤝", order=12)
+        self.assertEqual(dept3.emoji, "🤝")
+        self.assertEqual(str(dept3), "🤝 HR")
+        self.assertEqual(dept3.display_value, "🤝 HR")
+
+    def test_ampersand_department_filtering(self):
+        # Create department with &
+        dept = DepartmentOption.objects.create(name="Sales & Marketing", emoji="📈", order=1)
+        
+        # Create an employee in it
+        employee = Employee.objects.create(
+            first_name="Jane",
+            last_name="Doe",
+            department="Sales & Marketing",
+            avatar_emoji="📈",
+            avatar_color="#FFADAD"
+        )
+        
+        # Request grid with url encoded classroom parameter
+        response = self.client.get(reverse('student_grid') + '?classroom=Sales%20%26%20Marketing')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Jane Doe")
+        self.assertEqual(response.context['selected_classroom_name'], "Sales & Marketing")
+
 

@@ -74,7 +74,15 @@
                 <a href="{% url 'home' %}" class="navbar-brand">
                     <span class="brand-text">{{ app_name }}</span>
                 </a>
-                <nav class="navbar-links">
+                
+                <!-- Burger Button for collapsing navigation on smaller screens -->
+                <button class="navbar-burger" id="navbar-burger-btn" aria-label="Toggle navigation">
+                    <span class="burger-bar"></span>
+                    <span class="burger-bar"></span>
+                    <span class="burger-bar"></span>
+                </button>
+
+                <nav class="navbar-links" id="navbar-menu-links">
                     <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
                         Home
                     </a>
@@ -116,6 +124,16 @@
     <script src="{% static 'js/employee_attendance.js' %}?v={% now 'U' %}"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Hamburger Navbar toggle
+            const burgerBtn = document.getElementById("navbar-burger-btn");
+            const menuLinks = document.getElementById("navbar-menu-links");
+            if (burgerBtn && menuLinks) {
+                burgerBtn.addEventListener("click", function() {
+                    burgerBtn.classList.toggle("active");
+                    menuLinks.classList.toggle("active");
+                });
+            }
+
             const themeBtn = document.getElementById("theme-toggle-btn");
             const currentTheme = localStorage.getItem("theme");
 

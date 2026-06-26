@@ -1,52 +1,53 @@
-/* Employee Shift Hub Premium Corporate Theme */
+/* Employee Shift Hub Lumina Corporate Theme */
 
 :root {
-    --primary-color: #2563eb;
-    --primary-hover: #1d4ed8;
-    --primary-light: #eff6ff;
-    --success-color: #10b981;
-    --success-light: #ecfdf5;
-    --warning-color: #f59e0b;
-    --warning-light: #fef3c7;
-    --danger-color: #ef4444;
-    --danger-light: #fef2f2;
-    --bg-color: #f8fafc;
-    --card-bg: #ffffff;
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --border-color: #e2e8f0;
-    --font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.4);
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
+    --primary-color: #007AFF;
+    --primary-hover: #0056b3;
+    --primary-light: rgba(0, 122, 255, 0.12);
+    --success-color: #34C759;
+    --success-light: rgba(52, 199, 89, 0.15);
+    --warning-color: #FF9500;
+    --warning-light: rgba(255, 149, 0, 0.15);
+    --danger-color: #FF3B30;
+    --danger-light: rgba(255, 59, 48, 0.15);
+    --bg-color: #F5F5F7;
+    --card-bg: rgba(255, 255, 255, 0.72);
+    --text-main: #1D1D1F;
+    --text-muted: #86868B;
+    --border-color: rgba(0, 0, 0, 0.08);
+    --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --heading-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.12);
+    --radius-sm: 10px;
+    --radius-md: 16px;
+    --radius-lg: 22px;
     
     /* Time-related banner colors */
-    --morning-bg: #e0f2fe;
-    --morning-text: #0369a1;
-    --afternoon-bg: #fef3c7;
-    --afternoon-text: #b45309;
-    --night-bg: #e0e7ff;
-    --night-text: #4338ca;
+    --morning-bg: rgba(0, 122, 255, 0.12);
+    --morning-text: #007AFF;
+    --afternoon-bg: rgba(255, 149, 0, 0.15);
+    --afternoon-text: #FF9500;
+    --night-bg: rgba(142, 142, 147, 0.15);
+    --night-text: #8E8E93;
 }
 
 /* Dark Theme Variables */
 body.dark-theme {
-    --bg-color: #0f172a;
-    --card-bg: #1e293b;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --border-color: #334155;
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.05);
-    --primary-light: #1e3a8a;
-    --success-light: #064e3b;
-    --warning-light: #78350f;
-    --danger-light: #7f1d1d;
+    --bg-color: #000000;
+    --card-bg: rgba(44, 44, 46, 0.72);
+    --text-main: #F5F5F7;
+    --text-muted: #86868B;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(44, 44, 46, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --primary-light: rgba(0, 122, 255, 0.25);
+    --success-light: rgba(52, 199, 89, 0.25);
+    --warning-light: rgba(255, 149, 0, 0.25);
+    --danger-light: rgba(255, 59, 48, 0.25);
 }
 
 * {
@@ -63,11 +64,19 @@ body {
     overflow-x: hidden;
 }
 
-/* Sky background is now professional corporate mesh background */
+h1, h2, h3, h4, h5, h6, .brand-text, .school-logo-bubble h1, .modal-header-section h2, .roster-editor-title, .support-header h1 {
+    font-family: var(--heading-font-family) !important;
+    letter-spacing: -0.025em;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Sky background is now Apple macOS ambient mesh background */
 .sky-background {
     min-height: 100vh;
-    background: radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.03) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.03) 0%, transparent 45%);
+    background: radial-gradient(circle at 15% 15%, rgba(0, 122, 255, 0.1) 0%, transparent 45%),
+                radial-gradient(circle at 85% 20%, rgba(175, 82, 222, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 85%, rgba(52, 199, 89, 0.08) 0%, transparent 55%),
+                var(--bg-color);
     position: relative;
     padding-bottom: 2rem;
 }
@@ -83,7 +92,7 @@ body {
     padding: 0 1.5rem;
 }
 
-/* Sleek Corporate Navbar */
+/* Sleek Apple Navbar */
 .playful-navbar {
     display: flex;
     justify-content: space-between;
@@ -91,7 +100,8 @@ body {
     padding: 1rem 0;
     margin-bottom: 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
     background-color: var(--glass-bg);
     border-radius: var(--radius-md);
     margin-top: 1rem;
@@ -286,8 +296,8 @@ body {
 }
 
 .class-tab-btn:hover {
-    color: var(--text-main);
-    background-color: var(--bg-color);
+    color: var(--primary-color);
+    background-color: var(--primary-light);
 }
 
 .class-tab-btn.active {
@@ -308,7 +318,7 @@ body {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 1rem 1.25rem;
+    padding: 1.25rem 1.5rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -327,20 +337,33 @@ body {
 }
 
 .stat-pill-text {
-    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column-reverse;
+    font-size: 0.8rem;
     color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    gap: 0.15rem;
+    line-height: 1.2;
 }
 
 .stat-pill-text strong {
-    font-size: 1.25rem;
-    color: var(--text-main);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--primary-color);
     display: block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 .stat-pill.progress-pill {
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     justify-content: center;
+    gap: 0.5rem;
 }
 
 .progress-bar-container {
@@ -349,7 +372,6 @@ body {
     background-color: var(--border-color);
     border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 0.4rem;
 }
 
 .progress-bar-fill {
@@ -360,9 +382,11 @@ body {
 }
 
 .progress-percent-text {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
-    color: var(--text-main);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 /* Employees Grid / Kids Grid Container */
@@ -375,17 +399,19 @@ body {
 
 .kid-card {
     background-color: var(--card-bg);
-    border: 2px solid var(--border-color);
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    text-align: center;
+    padding: 1.5rem 1.5rem 1.5rem 2rem;
+    text-align: left;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
     position: relative;
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .kid-card::before {
@@ -393,16 +419,16 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    height: 6px;
+    bottom: 0;
+    width: 6px;
     background-color: var(--kid-color, var(--primary-color));
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
 }
 
 .kid-card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-5px) scale(1.01);
     box-shadow: var(--shadow-lg);
-    border-color: var(--kid-color, var(--primary-color));
+    border-color: rgba(0, 122, 255, 0.4);
 }
 
 .kid-avatar-wrapper {
@@ -423,15 +449,18 @@ body {
     position: absolute;
     bottom: -2px;
     right: -2px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
+    width: auto;
+    min-width: 28px;
+    height: auto;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
     background-color: var(--card-bg);
     border: 2px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
+    font-size: 0.75rem;
+    font-weight: 800;
     box-shadow: var(--shadow-sm);
 }
 
@@ -461,17 +490,25 @@ body {
 .kid-card.checked-in {
     border-color: var(--success-color);
 }
+.kid-card.checked-in::before {
+    background-color: var(--success-color) !important;
+}
 .kid-card.checked-in .status-indicator-badge {
     border-color: var(--success-color);
     background-color: var(--success-light);
+    color: var(--success-color);
 }
 
 .kid-card.checked-in-late {
     border-color: var(--warning-color);
 }
+.kid-card.checked-in-late::before {
+    background-color: var(--warning-color) !important;
+}
 .kid-card.checked-in-late .status-indicator-badge {
     border-color: var(--warning-color);
     background-color: var(--warning-light);
+    color: var(--warning-color);
 }
 
 /* Empty Classroom State */
@@ -832,11 +869,26 @@ body {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 1.25rem;
+    padding: 1.25rem 1.25rem 1.25rem 1.75rem;
     box-shadow: var(--shadow-sm);
     position: relative;
     overflow: hidden;
 }
+
+.mini-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 5px;
+    background-color: var(--border-color);
+}
+
+.mini-stat-card.present::before { background-color: var(--success-color); }
+.mini-stat-card.late::before { background-color: var(--warning-color); }
+.mini-stat-card.absent::before { background-color: var(--danger-color); }
+.mini-stat-card.rate::before { background-color: var(--primary-color); }
 
 .mini-stat-card .label {
     font-size: 0.85rem;
@@ -852,11 +904,6 @@ body {
     font-weight: 800;
     color: var(--text-main);
 }
-
-.mini-stat-card.present { border-left: 4px solid var(--success-color); }
-.mini-stat-card.late { border-left: 4px solid var(--warning-color); }
-.mini-stat-card.absent { border-left: 4px solid var(--danger-color); }
-.mini-stat-card.rate { border-left: 4px solid var(--primary-color); }
 
 /* Table design for roster logs */
 .roster-table-container {
@@ -931,11 +978,23 @@ body {
 .shift-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.6rem;
-    border-radius: var(--radius-sm);
+    position: relative;
+    padding: 0.25rem 0.6rem 0.25rem 1.25rem;
+    border-radius: 9999px;
     font-size: 0.8rem;
     font-weight: 700;
+}
+
+.shift-badge::before {
+    content: '';
+    position: absolute;
+    left: 0.45rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
 }
 
 .badge-morning { background-color: var(--morning-bg); color: var(--morning-text); }
@@ -1066,39 +1125,80 @@ body {
     }
 }
 
+/* Sleek Apple Navbar Burger Styles */
+.navbar-burger {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1000;
+}
+
+.burger-bar {
+    height: 2px;
+    width: 100%;
+    background-color: var(--text-main);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Transmute burger to Close X */
+.navbar-burger.active .burger-bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.navbar-burger.active .burger-bar:nth-child(2) {
+    opacity: 0;
+}
+
+.navbar-burger.active .burger-bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
 /* Responsive navigation and header scaling */
-@media (max-width: 1100px) {
+@media (max-width: 992px) {
     .playful-navbar {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-        padding: 1.25rem 1rem;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        padding: 1rem 1.5rem !important;
+        gap: 0 !important;
+    }
+    .navbar-burger {
+        display: flex;
     }
     .navbar-links {
-        flex-wrap: wrap;
-        justify-content: center;
+        display: none;
+        flex-direction: column;
         width: 100%;
         gap: 0.5rem;
+        margin-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        padding-top: 1rem;
+        text-align: left;
+    }
+    .navbar-links.active {
+        display: flex;
+    }
+    .navbar-links .nav-link {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        justify-content: flex-start;
+    }
+    .nav-user-info {
+        margin-left: 1rem !important;
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
     }
 }
 
 @media (max-width: 768px) {
-    .playful-navbar {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-        padding: 1.25rem 1rem;
-    }
-    .navbar-links {
-        flex-direction: column;
-        width: 100%;
-        gap: 0.5rem;
-    }
-    .navbar-links .nav-link {
-        width: 100%;
-        text-align: center;
-        padding: 0.6rem;
-    }
     .grid-header {
         flex-direction: column;
         align-items: flex-start;

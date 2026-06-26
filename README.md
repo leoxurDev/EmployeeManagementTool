@@ -352,13 +352,19 @@ A unified administration panel for the IT Support infrastructure that lets admin
 **Stylesheet:** [`static/css/leoxur_comm.css`](static/css/leoxur_comm.css)
 **Views:** `leoxur_comm_dashboard()`, `leoxur_comm_auth()`, `leoxur_comm_logout()`, `leoxur_comm_data()`
 
-A fully integrated internal communication hub styled as a modern messaging app with three core modules.
+A fully integrated internal communication hub styled as a modern messaging app with **four core modules**, a responsive macOS-style layout, and advanced workspace features.
+
+**General Workspace Features:**
+- **Workspace Fullscreen Mode** — Toggle fullscreen display on the workspace interface using the screen size expansion button (`🖥️` / `📴`) in the header.
+- **Collapsible Navigation (Burger Menu)** — The left navigation sidebar automatically collapses into a burger icon on smaller viewports, maximizing focus space.
+- **Universal User Search** — Search for other users by first name, last name, username, or email across Mails, Chats, and when selecting the caller in the IT support incident creator.
+- **ServiceNow Portal Shortcut** — Logged-in Support Engineers see a dedicated button in the header providing instant access to the external IT Incident Management portal (`/support/engineer/`).
 
 **Authentication:**
 - Users log in by selecting their role and ID:
-  - **Employee** — e.g., `employee_1`, `employee_2`
-  - **Manager** — e.g., `manager_1`
-  - **Engineer** — e.g., `engineer_1`, `engineer_2`
+  - **Employee** — e.g., `employee_1`, `employee_2` (requires 4-digit PIN)
+  - **Manager** — e.g., `manager_1` (requires Django password)
+  - **Engineer** — e.g., `engineer_1`, `engineer_2` (requires engineer password)
 - Session is stored as `leoxur_user_id` in the Django session. Separate from manager and engineer auth.
 
 ---
@@ -366,12 +372,12 @@ A fully integrated internal communication hub styled as a modern messaging app w
 #### 📧 Mails (Internal Email)
 
 - Compose and send internal emails to any registered user across all roles.
+- **Mail Reply Functionality** — Easily reply to any received email directly from the active view, threading comments.
 - **Inbox / Sent / All** views to organize email.
 - Mark emails as read (updates `LeoxurEmail.is_read` flag).
 - API Endpoints:
   - `POST /leoxur-comm/send-email/` — Send an internal email.
   - `POST /leoxur-comm/read-email/` — Mark an email as read.
-- Backed by the `LeoxurEmail` model.
 
 ---
 
@@ -383,12 +389,27 @@ A fully integrated internal communication hub styled as a modern messaging app w
   - `#managers` — Management-only channel
   - `#announcements` — Broadcast announcements
 - **Direct Messages** — One-to-one user messages (any user to any other user).
+- **Real-Time Sound Notifications** — A high-fidelity chime synthesized using the Web Audio API plays in the browser whenever new chat messages are received.
 - Real-time-style chat UI with **AJAX polling** for new messages.
 - **Message threading / replies** — Messages can have a `parent_message` FK for threaded replies.
 - API Endpoints:
   - `POST /leoxur-comm/send-chat/` — Send a chat message to a channel or DM.
   - `GET /leoxur-comm/data/` — Poll for new messages, emails, and task updates.
 - Backed by the `LeoxurMessage` model.
+
+---
+
+#### 📝 Leo Notes (Personal & Collaborative Notes)
+
+- A clean distraction-free, macOS Notes style basic notes tool next to the task board.
+- **Create, Read, Update, Delete (CRUD)** text notes (`.txt` files).
+- **Auto-save** changes instantly in the browser client `localStorage` with visual save status indicators (Saving... / Saved).
+- **Interactive Search** to find notes quickly by title or content.
+- **Privacy & Collaboration Controls**:
+  - **🔒 Private (Default)**: Note is visible and editable only by the user who created it (based on `activeUserId`). Displays a lock emoji `🔒` in the note list card.
+  - **👥 Collaborative**: Note is shared across all workspace profiles. Accessible and editable by any logged-in user. Displays a people emoji `👥` in the note list card.
+  - **Toolbar Visibility Selector**: Dropdown selector inside the note toolbar allows changing the note's visibility status between Private and Collaborative instantly.
+  - **Simulated Multi-User Filtering**: Dynamically filters notes so that private notes remain hidden when switching user profiles or logging out/in as another user.
 
 ---
 
@@ -401,6 +422,7 @@ A fully integrated internal communication hub styled as a modern messaging app w
   - **Assignee** — Assign a task to any user in the system
 - Comment on tasks for discussion and updates.
 - **Kanban board view** — Tasks grouped visually by status column.
+- **Responsive Detail Modals** — Modal views are optimized for smaller viewports with scrollable layouts so the "Save Changes" and status buttons remain accessible.
 - API Endpoints:
   - `POST /leoxur-comm/create-task/` — Create a new task.
   - `POST /leoxur-comm/update-task/` — Update task status or priority.

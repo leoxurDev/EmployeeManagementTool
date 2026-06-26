@@ -56,8 +56,9 @@
         
         <!-- Sidebar Navigation -->
         <aside class="comm-sidebar">
-            <div class="comm-sidebar-brand">
+            <div class="comm-sidebar-brand" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                 <h2>Leoxur Workspace</h2>
+                <button id="workspace-fullscreen-btn" onclick="toggleWorkspaceFullscreen()" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; opacity: 0.8; transition: transform 0.2s, opacity 0.2s; border-radius: 4px;" title="Toggle Fullscreen" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.8'; this.style.transform='scale(1)'">🖥️</button>
             </div>
 
             <!-- Active User Profile Card -->
@@ -91,6 +92,20 @@
                 <button class="comm-nav-item" onclick="switchCommTab('tasks')">
                     Tasks Board
                 </button>
+                <button class="comm-nav-item" onclick="switchCommTab('leonotes')">
+                    Leo Notes 📝
+                </button>
+                
+                <!-- ServiceNow Portal for Support Engineers -->
+                {% if active_user_id and 'engineer_' in active_user_id %}
+                <a href="/support/engineer/" id="engineer-sn-portal-link" class="comm-nav-item" style="display: flex; align-items: center; gap: 0.5rem; color: var(--comm-success) !important; font-weight: 800; text-decoration: none;">
+                    ServiceNow Portal 🛠️
+                </a>
+                {% else %}
+                <a href="/support/engineer/" id="engineer-sn-portal-link" class="comm-nav-item" style="display: none; align-items: center; gap: 0.5rem; color: var(--comm-success) !important; font-weight: 800; text-decoration: none;">
+                    ServiceNow Portal 🛠️
+                </a>
+                {% endif %}
                 
                 <!-- Logout / Switch Identity -->
                 <button class="comm-nav-item comm-logout-btn" onclick="logoutCommUser()">
@@ -119,6 +134,7 @@
                                     Sent
                                 </button>
                             </div>
+                            <input type="text" id="mail-list-search" class="form-input" style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.35rem 0.5rem; background: var(--comm-glass); border: 1px solid var(--comm-border); color: var(--comm-text-main);" placeholder="Search mail by sender, subject..." oninput="renderEmailList()">
                         </div>
                         <div id="mail-inbox-list" class="mail-list">
                             <!-- Populated dynamically via JS -->
@@ -133,7 +149,12 @@
                         </div>
                         <div id="mail-view-details" style="display: none; height: 100%;" class="comm-tab-content active">
                             <div class="mail-detail-header">
-                                <h2 id="mail-view-subject" class="mail-detail-subject">Meeting Schedule Notice</h2>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                    <h2 id="mail-view-subject" class="mail-detail-subject">Meeting Schedule Notice</h2>
+                                    <button class="bubbly-btn primary-btn mail-reply-btn" id="mail-reply-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; flex-shrink: 0;" onclick="replyToCurrentMail()">
+                                        Reply
+                                    </button>
+                                </div>
                                 <div class="mail-detail-meta">
                                     <div id="mail-view-sender-avatar" class="comm-user-avatar" style="width:36px; height:36px; font-size:1.1rem;">👤</div>
                                     <div>
@@ -168,6 +189,7 @@
                         </button>
 
                         <div class="chat-section-title">Direct Messages</div>
+                        <input type="text" id="chat-dm-search" class="form-input" style="margin: 0.5rem 0.75rem; width: calc(100% - 1.5rem); font-size: 0.8rem; padding: 0.35rem 0.5rem; background: var(--comm-glass); border: 1px solid var(--comm-border); color: var(--comm-text-main); box-sizing: border-box;" placeholder="Search colleague..." oninput="renderChatClient()">
                         <div id="chat-dm-list">
                             <!-- Populated dynamically via JS -->
                         </div>
@@ -321,6 +343,50 @@
                 </div>
             </div>
 
+            <!-- TAB D: LEO NOTES (macOS-Style Notes App) -->
+            <div id="comm-tab-leonotes" class="comm-tab-content" style="height: 100%;">
+                <div class="leonotes-layout">
+                    <!-- Notes List Sidebar -->
+                    <div class="leonotes-sidebar">
+                        <div class="leonotes-sidebar-header">
+                            <span>📝 Leo Notes</span>
+                            <button class="leonotes-new-btn" onclick="createNewLeoNote()">+ New Note</button>
+                        </div>
+                        <!-- Search/filter notes -->
+                        <div style="padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--comm-border);">
+                            <input type="text" id="leonotes-search-input" class="form-input" style="margin: 0; font-size: 0.8rem; padding: 0.3rem 0.5rem; background: var(--comm-glass); border: 1px solid var(--comm-border); color: var(--comm-text-main); width: 100%; box-sizing: border-box;" placeholder="Search notes..." oninput="renderLeoNotesList()">
+                        </div>
+                        <div class="leonotes-list" id="leonotes-list">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Editor Area -->
+                    <div class="leonotes-editor-container">
+                        <div id="leonotes-editor-empty" class="leonotes-empty-view">
+                            <h3>No Note Selected</h3>
+                            <p>Select a note from the sidebar or click + New Note to start writing.</p>
+                        </div>
+                        <div id="leonotes-editor-active" style="display: none; flex-direction: column; height: 100%;">
+                            <!-- Toolbar / Header -->
+                            <div class="leonotes-toolbar">
+                                <input type="text" id="leonotes-note-title" placeholder="Note Title" oninput="handleLeoNoteTitleInput()" onblur="handleLeoNoteTitleBlur()">
+                                <div class="leonotes-toolbar-actions">
+                                    <select id="leonotes-note-visibility" onchange="handleLeoNoteVisibilityChange()" style="font-size: 0.75rem; background: var(--comm-bg-muted); border: 1px solid var(--comm-border); color: var(--comm-text-main); border-radius: 4px; padding: 2px 6px; outline: none; cursor: pointer;">
+                                        <option value="private">🔒 Private</option>
+                                        <option value="collaborative">👥 Collaborative</option>
+                                    </select>
+                                    <span id="leonotes-save-status" class="save-status">Saved</span>
+                                    <button class="bubbly-btn danger-btn" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="deleteActiveLeoNote()">Delete Note</button>
+                                </div>
+                            </div>
+                            <!-- Notes Body Textarea -->
+                            <textarea id="leonotes-textarea" class="leonotes-textarea" placeholder="Start typing your note here..." oninput="handleLeoNoteBodyInput()"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 </div>
@@ -338,6 +404,7 @@
         </div>
         <div class="form-group">
             <label for="mail-compose-receiver">Recipient</label>
+            <input type="text" id="mail-compose-search" class="form-input" style="margin-bottom: 0.5rem; font-size: 0.85rem;" placeholder="Search recipient by name/email..." oninput="filterMailRecipients()">
             <select id="mail-compose-receiver" class="form-select">
                 <!-- Populated dynamically -->
             </select>
@@ -530,6 +597,7 @@
 
     // Audio & notification states
     let loadedEmailIds = new Set();
+    let loadedMessageIds = new Set();
     let selectedRole = 'Manager';
     let currentReplyParentId = null;
 
@@ -554,6 +622,7 @@
             loadAllData();
             // Start polling updates for real-time messages
             setInterval(loadAllData, 4000);
+            initLeoNotes();
         }
     });
 
@@ -744,6 +813,7 @@
                 document.getElementById('comm-dashboard-layout-section').style.display = 'grid';
                 
                 loadAllData();
+                initLeoNotes();
                 setInterval(loadAllData, 4000);
             } else {
                 errorMsg.innerText = data.error;
@@ -817,6 +887,28 @@
                         showToast(`New Mail from ${newEmailObj.sender.name.split(' ')[0]}`, newEmailObj.subject);
                     }
 
+                    // Check for new chat messages and trigger alerts
+                    let hasNewMessage = false;
+                    let newMessageObj = null;
+
+                    if (loadedMessageIds.size > 0) {
+                        messages.forEach(msg => {
+                            if (!loadedMessageIds.has(msg.id) && msg.sender_id !== activeUserId) {
+                                hasNewMessage = true;
+                                newMessageObj = msg;
+                            }
+                        });
+                    }
+
+                    // Re-populate loaded message IDs
+                    loadedMessageIds.clear();
+                    messages.forEach(msg => loadedMessageIds.add(msg.id));
+
+                    if (hasNewMessage && newMessageObj) {
+                        playNotificationSound();
+                        showToast(`New Message from ${newMessageObj.sender.name.split(' ')[0]}`, newMessageObj.content, '💬');
+                    }
+
                     // Update Mails sidebar tab badge count
                     const unreadInboxCount = inboxEmails.filter(m => !m.is_read).length;
                     const badge = document.getElementById('mail-unread-badge');
@@ -839,6 +931,16 @@
                             if (selectedChatRoom === 'managers') {
                                 setChatRoom('general');
                             }
+                        }
+                    }
+
+                    // Show or hide ServiceNow Portal Link for engineers
+                    const snLink = document.getElementById('engineer-sn-portal-link');
+                    if (snLink) {
+                        if (activeUserId && activeUserId.startsWith('engineer_')) {
+                            snLink.style.display = 'flex';
+                        } else {
+                            snLink.style.display = 'none';
                         }
                     }
 
@@ -890,6 +992,27 @@
             filteredEmails = emails.filter(m => m.receiver_id === activeUserId);
         } else {
             filteredEmails = emails.filter(m => m.sender_id === activeUserId);
+        }
+
+        // Apply list search filters
+        const searchInput = document.getElementById('mail-list-search');
+        const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        if (searchVal !== '') {
+            filteredEmails = filteredEmails.filter(email => {
+                const matchSenderName = email.sender.name.toLowerCase();
+                const matchSenderEmail = email.sender.email ? email.sender.email.toLowerCase() : '';
+                const matchReceiverName = email.receiver.name.toLowerCase();
+                const matchReceiverEmail = email.receiver.email ? email.receiver.email.toLowerCase() : '';
+                const matchSubject = email.subject.toLowerCase();
+                const matchBody = email.body.toLowerCase();
+                
+                return matchSenderName.includes(searchVal) || 
+                       matchSenderEmail.includes(searchVal) || 
+                       matchReceiverName.includes(searchVal) || 
+                       matchReceiverEmail.includes(searchVal) ||
+                       matchSubject.includes(searchVal) || 
+                       matchBody.includes(searchVal);
+            });
         }
 
         if (filteredEmails.length === 0) {
@@ -964,26 +1087,92 @@
 
     // Modal compose operations
     function openComposeModal() {
+        const searchInput = document.getElementById('mail-compose-search');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        filterMailRecipients();
+        document.getElementById('email-compose-modal').style.display = 'flex';
+    }
+
+    function filterMailRecipients() {
+        const searchInput = document.getElementById('mail-compose-search');
+        const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
         const select = document.getElementById('mail-compose-receiver');
         select.innerHTML = '<option value="" selected disabled>-- Select Recipient --</option>';
         
-        // Add all users except current
         participants.forEach(p => {
             if (p.id !== activeUserId) {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.text = p.name;
-                select.add(opt);
+                const matchName = p.name.toLowerCase();
+                const matchEmail = p.email ? p.email.toLowerCase() : '';
+                if (searchVal === '' || matchName.includes(searchVal) || matchEmail.includes(searchVal)) {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.text = p.name;
+                    select.add(opt);
+                }
             }
         });
+    }
 
-        document.getElementById('email-compose-modal').style.display = 'flex';
+    function replyToCurrentMail() {
+        const email = emails.find(e => e.id === selectedMailId);
+        if (!email) return;
+
+        // Open compose modal to initialize recipient options
+        openComposeModal();
+
+        // Determine recipient: sender of the original email (or receiver if we sent it)
+        const recipientId = email.sender_id === activeUserId ? email.receiver_id : email.sender_id;
+        const select = document.getElementById('mail-compose-receiver');
+        
+        // Ensure the recipient exists in the select list
+        let optExists = false;
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === recipientId) {
+                optExists = true;
+                break;
+            }
+        }
+        if (!optExists) {
+            const isSender = email.sender_id === recipientId;
+            const pName = isSender ? email.sender.name : email.receiver.name;
+            const opt = document.createElement('option');
+            opt.value = recipientId;
+            opt.text = pName;
+            select.add(opt);
+        }
+        select.value = recipientId;
+
+        // Prepopulate Subject with "Re: " prefix
+        let subject = email.subject;
+        if (!subject.toLowerCase().startsWith('re:')) {
+            subject = 'Re: ' + subject;
+        }
+        document.getElementById('mail-compose-subject').value = subject;
+
+        // Prepopulate Body with original email quote
+        const origSender = email.sender.name;
+        const origDate = email.created_at;
+        const origBody = email.body;
+
+        const separator = `\n\n\n-----Original Message-----\nFrom: ${origSender}\nDate: ${origDate}\nSubject: ${email.subject}\n\n${origBody}`;
+        const bodyTextarea = document.getElementById('mail-compose-body');
+        bodyTextarea.value = separator;
+
+        // Set focus and move cursor to top
+        bodyTextarea.focus();
+        bodyTextarea.setSelectionRange(0, 0);
     }
 
     function closeComposeModal() {
         document.getElementById('email-compose-modal').style.display = 'none';
         document.getElementById('mail-compose-subject').value = '';
         document.getElementById('mail-compose-body').value = '';
+        const searchInput = document.getElementById('mail-compose-search');
+        if (searchInput) {
+            searchInput.value = '';
+        }
     }
 
     function sendLeoxurEmail() {
@@ -1085,20 +1274,26 @@
 
     function renderChatClient() {
         const dmsList = document.getElementById('chat-dm-list');
+        const searchInput = document.getElementById('chat-dm-search');
+        const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
         
         // 1. Render DMs List
         dmsList.innerHTML = '';
         participants.forEach(p => {
             if (p.id !== activeUserId) {
-                const btn = document.createElement('button');
-                const roomKeyArr = [activeUserId, p.id].sort();
-                const roomKey = `direct_${roomKeyArr[0]}_${roomKeyArr[1]}`;
-                
-                btn.className = `chat-room-item ${selectedChatRoom === roomKey ? 'active' : ''}`;
-                btn.setAttribute('data-id', roomKey);
-                btn.onclick = () => setChatRoom(roomKey);
-                btn.innerHTML = `<span class="comm-user-avatar" style="width:20px; height:20px; font-size:0.65rem; display:inline-flex; vertical-align:middle; margin-right:6px; --avatar-color:${p.avatar_color}">${getAvatarInitials(p.name)}</span> ${p.name}`;
-                dmsList.appendChild(btn);
+                const matchName = p.name.toLowerCase();
+                const matchEmail = p.email ? p.email.toLowerCase() : '';
+                if (searchVal === '' || matchName.includes(searchVal) || matchEmail.includes(searchVal)) {
+                    const btn = document.createElement('button');
+                    const roomKeyArr = [activeUserId, p.id].sort();
+                    const roomKey = `direct_${roomKeyArr[0]}_${roomKeyArr[1]}`;
+                    
+                    btn.className = `chat-room-item ${selectedChatRoom === roomKey ? 'active' : ''}`;
+                    btn.setAttribute('data-id', roomKey);
+                    btn.onclick = () => setChatRoom(roomKey);
+                    btn.innerHTML = `<span class="comm-user-avatar" style="width:20px; height:20px; font-size:0.65rem; display:inline-flex; vertical-align:middle; margin-right:6px; --avatar-color:${p.avatar_color}">${getAvatarInitials(p.name)}</span> ${p.name}`;
+                    dmsList.appendChild(btn);
+                }
             }
         });
 
@@ -1720,6 +1915,322 @@
             container.appendChild(div);
         });
         container.scrollTop = container.scrollHeight;
+    }
+
+    // ==============================================================================
+    // WORKSPACE FULLSCREEN LOGIC
+    // ==============================================================================
+    function toggleWorkspaceFullscreen() {
+        const container = document.getElementById('comm-dashboard-layout-section');
+        const btn = document.getElementById('workspace-fullscreen-btn');
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().then(() => {
+                container.classList.add('fullscreen-active');
+                if (btn) btn.innerHTML = '📴';
+            }).catch(err => {
+                console.error('Error entering fullscreen:', err);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+        const container = document.getElementById('comm-dashboard-layout-section');
+        const btn = document.getElementById('workspace-fullscreen-btn');
+        if (container) {
+            if (document.fullscreenElement) {
+                container.classList.add('fullscreen-active');
+                if (btn) btn.innerHTML = '📴';
+            } else {
+                container.classList.remove('fullscreen-active');
+                if (btn) btn.innerHTML = '🖥️';
+            }
+        }
+    });
+
+    // ==============================================================================
+    // LEO NOTES APP LOGIC
+    // ==============================================================================
+    let leoNotes = [];
+    let activeLeoNoteId = null;
+    let saveTimeout = null;
+
+    function getVisibleLeoNotes() {
+        return leoNotes.filter(note => {
+            return note.visibility === 'collaborative' || note.owner_id === activeUserId;
+        });
+    }
+
+    function initLeoNotes() {
+        const stored = localStorage.getItem('leonotes_files');
+        if (stored) {
+            try {
+                leoNotes = JSON.parse(stored);
+                // Ensure all existing notes have owner_id and visibility
+                let modified = false;
+                leoNotes.forEach(note => {
+                    if (!note.owner_id) {
+                        note.owner_id = activeUserId || 'manager_1';
+                        modified = true;
+                    }
+                    if (!note.visibility) {
+                        note.visibility = 'private';
+                        modified = true;
+                    }
+                });
+                if (modified) {
+                    saveLeoNotes();
+                }
+            } catch (e) {
+                leoNotes = [];
+            }
+        }
+        
+        if (!leoNotes || leoNotes.length === 0) {
+            leoNotes = [
+                {
+                    id: 'note_' + Date.now() + '_1',
+                    title: 'Welcome.txt',
+                    content: 'Welcome to Leo Notes!\n\nThis is a clean, macOS-style distraction-free note-taking workspace designed for managers and engineers.\n\nFeatures:\n- Create new text notes using the "+ New Note" button.\n- Type text directly into the editor. Changes are auto-saved in local storage.\n- Search for notes using the search bar.\n- Delete unwanted notes using the "Delete Note" button.\n\nHave a great workday!\n',
+                    owner_id: 'system',
+                    visibility: 'collaborative',
+                    updated_at: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                },
+                {
+                    id: 'note_' + Date.now() + '_2',
+                    title: 'Work Ideas.txt',
+                    content: 'Leo Notes Ideas:\n1. Integrate with Jira/Task Board.\n2. Add markdown rendering preview option.\n3. Enable folders/tags.\n',
+                    owner_id: activeUserId || 'manager_1',
+                    visibility: 'private',
+                    updated_at: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }
+            ];
+            saveLeoNotes();
+        }
+
+        renderLeoNotesList();
+        
+        // Auto select first visible note if available
+        const visible = getVisibleLeoNotes();
+        if (visible.length > 0) {
+            selectLeoNote(visible[0].id);
+        } else {
+            showEmptyNoteView();
+        }
+    }
+
+    function saveLeoNotes() {
+        localStorage.setItem('leonotes_files', JSON.stringify(leoNotes));
+    }
+
+    function renderLeoNotesList() {
+        const listContainer = document.getElementById('leonotes-list');
+        if (!listContainer) return;
+        
+        const searchInput = document.getElementById('leonotes-search-input');
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+        listContainer.innerHTML = '';
+        
+        const visibleNotes = getVisibleLeoNotes();
+        const filtered = visibleNotes.filter(note => {
+            return note.title.toLowerCase().includes(query) || note.content.toLowerCase().includes(query);
+        });
+
+        if (filtered.length === 0) {
+            listContainer.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: var(--comm-text-muted); font-size: 0.8rem;">No notes found</div>';
+            return;
+        }
+
+        filtered.forEach(note => {
+            const isSelected = note.id === activeLeoNoteId;
+            const card = document.createElement('div');
+            card.className = `note-card ${isSelected ? 'active' : ''}`;
+            card.onclick = () => selectLeoNote(note.id);
+            
+            // Clean up snippet
+            const snippet = note.content.trim().replace(/\n/g, ' ').substring(0, 35) || 'No additional text';
+            const icon = note.visibility === 'collaborative' ? '👥' : '🔒';
+
+            card.innerHTML = `
+                <div class="note-card-title">${icon} ${escapeHTML(note.title)}</div>
+                <div class="note-card-meta">
+                    <span class="note-card-date">${note.updated_at.split(' ')[0]}</span>
+                    <span class="note-card-snippet">${escapeHTML(snippet)}</span>
+                </div>
+            `;
+            listContainer.appendChild(card);
+        });
+    }
+
+    function selectLeoNote(id) {
+        activeLeoNoteId = id;
+        const note = leoNotes.find(n => n.id === id);
+        
+        const emptyView = document.getElementById('leonotes-editor-empty');
+        const activeView = document.getElementById('leonotes-editor-active');
+        const titleInput = document.getElementById('leonotes-note-title');
+        const textarea = document.getElementById('leonotes-textarea');
+        const saveStatus = document.getElementById('leonotes-save-status');
+        const visibilitySelect = document.getElementById('leonotes-note-visibility');
+
+        if (!note) {
+            showEmptyNoteView();
+            return;
+        }
+
+        // Check if the user is authorized to view this note
+        if (note.visibility !== 'collaborative' && note.owner_id !== activeUserId) {
+            showEmptyNoteView();
+            return;
+        }
+
+        if (emptyView) emptyView.style.display = 'none';
+        if (activeView) activeView.style.display = 'flex';
+        
+        if (titleInput) titleInput.value = note.title;
+        if (textarea) textarea.value = note.content;
+        if (saveStatus) saveStatus.innerText = 'Saved';
+        if (visibilitySelect) visibilitySelect.value = note.visibility || 'private';
+
+        // Re-render notes list to update active highlight
+        renderLeoNotesList();
+    }
+
+    function showEmptyNoteView() {
+        activeLeoNoteId = null;
+        const emptyView = document.getElementById('leonotes-editor-empty');
+        const activeView = document.getElementById('leonotes-editor-active');
+        
+        if (emptyView) emptyView.style.display = 'block';
+        if (activeView) activeView.style.display = 'none';
+        
+        renderLeoNotesList();
+    }
+
+    function createNewLeoNote() {
+        let baseName = 'Untitled Note';
+        let extension = '.txt';
+        let candidate = baseName + extension;
+        let counter = 1;
+        
+        while (leoNotes.some(n => n.title.toLowerCase() === candidate.toLowerCase())) {
+            counter++;
+            candidate = `${baseName} ${counter}${extension}`;
+        }
+
+        const newNote = {
+            id: 'note_' + Date.now(),
+            title: candidate,
+            content: '',
+            owner_id: activeUserId,
+            visibility: 'private',
+            updated_at: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        leoNotes.unshift(newNote);
+        saveLeoNotes();
+        selectLeoNote(newNote.id);
+
+        // Focus the title input and select its text for easy renaming
+        const titleInput = document.getElementById('leonotes-note-title');
+        if (titleInput) {
+            titleInput.focus();
+            titleInput.select();
+        }
+    }
+
+    function deleteActiveLeoNote() {
+        if (!activeLeoNoteId) return;
+        const note = leoNotes.find(n => n.id === activeLeoNoteId);
+        if (!note) return;
+
+        if (!confirm(`Are you sure you want to delete "${note.title}"?`)) return;
+
+        leoNotes = leoNotes.filter(n => n.id !== activeLeoNoteId);
+        saveLeoNotes();
+
+        const visible = getVisibleLeoNotes();
+        if (visible.length > 0) {
+            selectLeoNote(visible[0].id);
+        } else {
+            showEmptyNoteView();
+        }
+    }
+
+    function handleLeoNoteTitleInput() {
+        const titleInput = document.getElementById('leonotes-note-title');
+        if (!titleInput || !activeLeoNoteId) return;
+
+        const note = leoNotes.find(n => n.id === activeLeoNoteId);
+        if (note) {
+            note.title = titleInput.value;
+            triggerAutoSave();
+        }
+    }
+
+    function handleLeoNoteTitleBlur() {
+        const titleInput = document.getElementById('leonotes-note-title');
+        if (!titleInput || !activeLeoNoteId) return;
+
+        const note = leoNotes.find(n => n.id === activeLeoNoteId);
+        if (note) {
+            let val = titleInput.value.trim();
+            if (val.length === 0) val = 'Untitled Note';
+            if (!val.toLowerCase().endsWith('.txt')) {
+                val += '.txt';
+            }
+            note.title = val;
+            titleInput.value = val;
+            
+            note.updated_at = new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            saveLeoNotes();
+            renderLeoNotesList();
+        }
+    }
+
+    function handleLeoNoteBodyInput() {
+        const textarea = document.getElementById('leonotes-textarea');
+        if (!textarea || !activeLeoNoteId) return;
+
+        const note = leoNotes.find(n => n.id === activeLeoNoteId);
+        if (note) {
+            note.content = textarea.value;
+            triggerAutoSave();
+        }
+    }
+
+    function handleLeoNoteVisibilityChange() {
+        const select = document.getElementById('leonotes-note-visibility');
+        if (!select || !activeLeoNoteId) return;
+
+        const note = leoNotes.find(n => n.id === activeLeoNoteId);
+        if (note) {
+            note.visibility = select.value;
+            note.updated_at = new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            saveLeoNotes();
+            renderLeoNotesList();
+            const saveStatus = document.getElementById('leonotes-save-status');
+            if (saveStatus) saveStatus.innerText = 'Saved';
+        }
+    }
+
+    function triggerAutoSave() {
+        const saveStatus = document.getElementById('leonotes-save-status');
+        if (saveStatus) saveStatus.innerText = 'Saving...';
+
+        if (saveTimeout) clearTimeout(saveTimeout);
+        
+        saveTimeout = setTimeout(() => {
+            const note = leoNotes.find(n => n.id === activeLeoNoteId);
+            if (note) {
+                note.updated_at = new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            saveLeoNotes();
+            renderLeoNotesList();
+            if (saveStatus) saveStatus.innerText = 'Saved';
+        }, 800);
     }
 </script>
 {% endblock %}

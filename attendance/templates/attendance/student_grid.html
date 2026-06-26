@@ -22,7 +22,7 @@
 <!-- Department Selection Tabs -->
 <div class="class-picker-row">
     {% for dept_name, label in classrooms %}
-    <a href="?classroom={{ dept_name }}"
+    <a href="?classroom={{ dept_name|urlencode }}"
         class="class-tab-btn {% if dept_name == selected_classroom_name %}active{% endif %}">
         {{ label }}
     </a>

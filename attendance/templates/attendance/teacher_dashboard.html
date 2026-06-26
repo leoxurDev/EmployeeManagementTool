@@ -12,7 +12,7 @@
         <p style="color: var(--text-muted); font-weight: 500;">Monitor employee attendance, shifts, and active rosters</p>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-        <a href="{% url 'export_student_csv' %}?classroom={{ selected_classroom }}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+        <a href="{% url 'export_student_csv' %}?classroom={{ selected_classroom|urlencode }}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
             Export CSV Logs
         </a>
         {% if request.user.is_staff or request.user.is_superuser %}
