@@ -86,9 +86,30 @@ fi
 echo "  🐳  Building and starting Docker containers..."
 docker-compose up --build -d
 
-echo ""
-echo "  ⏳  Waiting for the container to be ready..."
-sleep 8
+# --- Wait for database service to be ready ---
+echo "  ⏳  Waiting for database connection to be established..."
+MAX_ATTEMPTS=30
+ATTEMPT=1
+until docker-compose exec -T web python -c "
+import os, sys, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'employee_attendance.settings')
+django.setup()
+from django.db import connections
+from django.db.utils import OperationalError
+try:
+    connections['default'].cursor()
+    sys.exit(0)
+except OperationalError:
+    sys.exit(1)
+" >/dev/null 2>&1; do
+    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+        echo "  ❌  Error: Database did not become ready in time."
+        exit 1
+    fi
+    echo "  ... waiting for database ($ATTEMPT/$MAX_ATTEMPTS) ..."
+    sleep 2
+    ATTEMPT=$((ATTEMPT + 1))
+done
 
 # --- Apply database migrations ---
 echo "  🗄️   Applying database migrations..."
