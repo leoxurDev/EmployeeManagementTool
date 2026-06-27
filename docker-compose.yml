@@ -42,8 +42,6 @@ services:
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
-      PMA_USER: employee_user
-      PMA_PASSWORD: employeepassword
     ports:
       - "8080:80"
 
