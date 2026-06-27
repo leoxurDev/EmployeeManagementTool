@@ -1080,6 +1080,8 @@ The latest version of the Employee Time & Management Portal introduces critical 
 
 - **Enhanced Access Security**: Upgraded the Kiosk system login to require a secure **6-digit PIN** instead of the previous 4-digit setup.
 - **Flexible Database Deployments**: Interactive `deploy.sh` script now supports seamless setup and migrations for both standard **SQLite** and containerized **MySQL 8.0** databases.
+- **Robust Connection Waiter**: Replaced the static boot sleep timer in `deploy.sh` with a dynamic Django database connection checker loop that polls database socket readiness, resolving container migration race conditions.
+- **Database Administration Web UI**: Introduced a containerized **phpMyAdmin** dashboard accessible at port `8080` (with secure cookie-based login credentials authentication) to view and manage data from your web browser.
 - **Refined Tech Themes**: Restructured the visual layout with a custom slate-indigo color scheme for both **Light Mode** and **Dark Mode** toggle configurations. Emojis and liquid glass styles have been fully stripped for a clean corporate vibe.
 - **Email CC Multi-recipient support**: Added custom database mapping and multi-select recipient search selectors to include CC'd users in Leoxur email delivery streams.
 - **Responsive Inline Dashboard Panes**: Replaced task board creation and edit overlay popups with dedicated inline split-column grids (input content on left, sidebar attributes on right) designed to scroll independently and scale smoothly across desktop, tablet, and mobile views.
