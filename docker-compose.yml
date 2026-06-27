@@ -33,5 +33,19 @@ services:
       - DB_PORT=3306
     restart: always
 
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: employee_manage_pma
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: employee_user
+      PMA_PASSWORD: employeepassword
+    ports:
+      - "8080:80"
+
 volumes:
   mysql_data:
