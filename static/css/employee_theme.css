@@ -1,53 +1,53 @@
 /* Employee Shift Hub Lumina Corporate Theme */
 
 :root {
-    --primary-color: #007AFF;
-    --primary-hover: #0056b3;
-    --primary-light: rgba(0, 122, 255, 0.12);
-    --success-color: #34C759;
-    --success-light: rgba(52, 199, 89, 0.15);
-    --warning-color: #FF9500;
-    --warning-light: rgba(255, 149, 0, 0.15);
-    --danger-color: #FF3B30;
-    --danger-light: rgba(255, 59, 48, 0.15);
-    --bg-color: #F5F5F7;
-    --card-bg: rgba(255, 255, 255, 0.72);
-    --text-main: #1D1D1F;
-    --text-muted: #86868B;
-    --border-color: rgba(0, 0, 0, 0.08);
+    --primary-color: #4F46E5;
+    --primary-hover: #4338CA;
+    --primary-light: rgba(79, 70, 229, 0.12);
+    --success-color: #10B981;
+    --success-light: rgba(16, 185, 129, 0.15);
+    --warning-color: #F59E0B;
+    --warning-light: rgba(245, 158, 11, 0.15);
+    --danger-color: #EF4444;
+    --danger-light: rgba(239, 68, 68, 0.15);
+    --bg-color: #F8FAFC;
+    --card-bg: rgba(255, 255, 255, 0.85);
+    --text-main: #0F172A;
+    --text-muted: #64748B;
+    --border-color: rgba(15, 23, 42, 0.08);
     --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --heading-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-bg: rgba(255, 255, 255, 0.8);
     --glass-border: rgba(255, 255, 255, 0.6);
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.12);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.1);
     --radius-sm: 10px;
     --radius-md: 16px;
     --radius-lg: 22px;
     
     /* Time-related banner colors */
-    --morning-bg: rgba(0, 122, 255, 0.12);
-    --morning-text: #007AFF;
-    --afternoon-bg: rgba(255, 149, 0, 0.15);
-    --afternoon-text: #FF9500;
-    --night-bg: rgba(142, 142, 147, 0.15);
-    --night-text: #8E8E93;
+    --morning-bg: rgba(79, 70, 229, 0.12);
+    --morning-text: #4F46E5;
+    --afternoon-bg: rgba(245, 158, 11, 0.15);
+    --afternoon-text: #F59E0B;
+    --night-bg: rgba(100, 116, 139, 0.15);
+    --night-text: #64748B;
 }
 
 /* Dark Theme Variables */
 body.dark-theme {
-    --bg-color: #000000;
-    --card-bg: rgba(44, 44, 46, 0.72);
-    --text-main: #F5F5F7;
-    --text-muted: #86868B;
-    --border-color: rgba(255, 255, 255, 0.1);
-    --glass-bg: rgba(44, 44, 46, 0.72);
-    --glass-border: rgba(255, 255, 255, 0.15);
-    --primary-light: rgba(0, 122, 255, 0.25);
-    --success-light: rgba(52, 199, 89, 0.25);
-    --warning-light: rgba(255, 149, 0, 0.25);
-    --danger-light: rgba(255, 59, 48, 0.25);
+    --bg-color: #0B0F19;
+    --card-bg: rgba(21, 28, 44, 0.85);
+    --text-main: #F8FAFC;
+    --text-muted: #94A3B8;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --glass-bg: rgba(21, 28, 44, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --primary-light: rgba(99, 102, 241, 0.25);
+    --success-light: rgba(16, 185, 129, 0.25);
+    --warning-light: rgba(245, 158, 11, 0.25);
+    --danger-light: rgba(239, 68, 68, 0.25);
 }
 
 * {

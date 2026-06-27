@@ -104,10 +104,10 @@ function initEmployeeGrid() {
             const action = btn.getAttribute('data-action');
 
             if (val !== null) {
-                if (currentPIN.length < 4) {
+                if (currentPIN.length < 6) {
                     currentPIN += val;
                     updatePINDots();
-                    if (currentPIN.length === 4) {
+                    if (currentPIN.length === 6) {
                         verifyPINCode();
                     }
                 }
@@ -134,7 +134,7 @@ function initEmployeeGrid() {
 
     function verifyPINCode() {
         const formData = new FormData();
-        formData.append('student_id', currentSelectedEmployeeId);
+        formData.append('employee_id', currentSelectedEmployeeId);
         formData.append('pin_code', currentPIN);
 
         fetch(VERIFY_PIN_URL, {
@@ -229,7 +229,7 @@ function initEmployeeGrid() {
         const action = submitBtn.getAttribute('data-action');
 
         const formData = new FormData();
-        formData.append('student_id', currentSelectedEmployeeId);
+        formData.append('employee_id', currentSelectedEmployeeId);
         formData.append('action', action);
         formData.append('mood', currentSelectedWorkMode); // mapped to work_mode in views
 
@@ -307,11 +307,11 @@ function initManagerDashboard() {
 
     actionBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const empId = btn.getAttribute('data-student');
+            const empId = btn.getAttribute('data-employee');
             const status = btn.getAttribute('data-status');
             
             const formData = new FormData();
-            formData.append('student_id', empId);
+            formData.append('employee_id', empId);
             formData.append('action', status === 'absent' ? 'check_out' : 'check_in');
             formData.append('status', status);
 
@@ -325,7 +325,7 @@ function initManagerDashboard() {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    const empButtons = document.querySelectorAll(`.status-action-btn[data-student="${empId}"]`);
+                    const empButtons = document.querySelectorAll(`.status-action-btn[data-employee="${empId}"]`);
                     empButtons.forEach(b => {
                         if (b.getAttribute('data-status') === status) {
                             b.classList.add('active');
@@ -334,12 +334,12 @@ function initManagerDashboard() {
                         }
                     });
 
-                    const timeCells = document.querySelectorAll(`[data-student-id="${empId}"] .checked-time-cell`);
+                    const timeCells = document.querySelectorAll(`[data-employee-id="${empId}"] .checked-time-cell`);
                     timeCells.forEach(cell => {
                         cell.textContent = (status !== 'absent') ? data.time : '-';
                     });
 
-                    const moodCells = document.querySelectorAll(`[data-student-id="${empId}"] .mood-cell`);
+                    const moodCells = document.querySelectorAll(`[data-employee-id="${empId}"] .mood-cell`);
                     moodCells.forEach(cell => {
                         cell.textContent = (status !== 'absent' && data.mood_emoji) ? `${data.mood.charAt(0).toUpperCase() + data.mood.slice(1)} ${data.mood_emoji}` : '-';
                     });
@@ -431,8 +431,8 @@ function initManagerDashboard() {
 
 function recalculateManagerStats() {
     const empIdSet = new Set();
-    document.querySelectorAll('[data-student-id]').forEach(el => {
-        const eid = el.getAttribute('data-student-id');
+    document.querySelectorAll('[data-employee-id]').forEach(el => {
+        const eid = el.getAttribute('data-employee-id');
         if (eid) empIdSet.add(eid);
     });
     const totalEmployees = empIdSet.size;
@@ -442,7 +442,7 @@ function recalculateManagerStats() {
     let absentCount = 0;
 
     empIdSet.forEach(eid => {
-        const activeBtn = document.querySelector(`.status-action-btn.active[data-student="${eid}"]`);
+        const activeBtn = document.querySelector(`.status-action-btn.active[data-employee="${eid}"]`);
         if (activeBtn) {
             const status = activeBtn.getAttribute('data-status');
             if (status === 'present') presentCount++;
@@ -570,10 +570,10 @@ function animateParticles() {
 
 // --- Unified Login Controller ---
 function initUnifiedLogin() {
-    const tabStudent = document.getElementById('tab-student');
-    const tabTeacher = document.getElementById('tab-teacher');
-    const studentSection = document.getElementById('student-login-section');
-    const teacherSection = document.getElementById('teacher-login-section');
+    const tabStudent = document.getElementById('tab-employee');
+    const tabTeacher = document.getElementById('tab-manager');
+    const studentSection = document.getElementById('employee-login-section');
+    const teacherSection = document.getElementById('manager-login-section');
     const slider = document.querySelector('.login-tab-slider');
 
     if (!tabStudent || !tabTeacher) return;
@@ -602,18 +602,18 @@ function initUnifiedLogin() {
     let selectedWorkMode = 'office';
     let pinBuffer = '';
 
-    const empSelect = document.getElementById('student-select');
-    const selectGroup = document.getElementById('student-select-group');
-    const keypadContainer = document.getElementById('student-keypad-container');
-    const moodContainer = document.getElementById('student-mood-container');
-    const successContainer = document.getElementById('student-success-container');
-    const moodWelcomeText = document.getElementById('student-mood-welcome');
-    const pinDots = document.querySelectorAll('#student-keypad-container .pin-dot');
-    const pinErrorMsg = document.getElementById('student-pin-error-msg');
-    const keypadButtons = document.querySelectorAll('.keypad-btn.student-key');
-    const workModeButtons = document.querySelectorAll('#student-mood-container .mood-option-btn');
-    const submitBtn = document.getElementById('student-submit-checkin');
-    const resetBtn = document.getElementById('student-reset-btn');
+    const empSelect = document.getElementById('employee-select');
+    const selectGroup = document.getElementById('employee-select-group');
+    const keypadContainer = document.getElementById('employee-keypad-container');
+    const moodContainer = document.getElementById('employee-mood-container');
+    const successContainer = document.getElementById('employee-success-container');
+    const moodWelcomeText = document.getElementById('employee-mood-welcome');
+    const pinDots = document.querySelectorAll('#employee-keypad-container .pin-dot');
+    const pinErrorMsg = document.getElementById('employee-pin-error-msg');
+    const keypadButtons = document.querySelectorAll('.keypad-btn.employee-key');
+    const workModeButtons = document.querySelectorAll('#employee-mood-container .mood-option-btn');
+    const submitBtn = document.getElementById('employee-submit-checkin');
+    const resetBtn = document.getElementById('employee-reset-btn');
 
     function resetStudentPIN() {
         pinBuffer = '';
@@ -643,10 +643,10 @@ function initUnifiedLogin() {
             const action = btn.getAttribute('data-action');
 
             if (val !== null) {
-                if (pinBuffer.length < 4) {
+                if (pinBuffer.length < 6) {
                     pinBuffer += val;
                     updateDots();
-                    if (pinBuffer.length === 4) {
+                    if (pinBuffer.length === 6) {
                         verifyStudentPIN();
                     }
                 }
@@ -673,7 +673,7 @@ function initUnifiedLogin() {
 
     function verifyStudentPIN() {
         const formData = new FormData();
-        formData.append('student_id', selectedEmployeeId);
+        formData.append('employee_id', selectedEmployeeId);
         formData.append('pin_code', pinBuffer);
 
         fetch(VERIFY_PIN_URL, {
@@ -689,13 +689,13 @@ function initUnifiedLogin() {
                 if (selectGroup) selectGroup.style.display = 'none';
                 if (keypadContainer) keypadContainer.style.display = 'none';
                 
-                const selectTitle = document.querySelector('#student-mood-container .modal-header-section p');
+                const selectTitle = document.querySelector('#employee-mood-container .modal-header-section p');
                 
                 if (data.state === 'not_checked_in') {
                     if (moodWelcomeText) moodWelcomeText.textContent = `Welcome, ${selectedEmployeeName}`;
                     if (selectTitle) selectTitle.innerHTML = `Scheduled: <strong>${data.rostered_shift}</strong><br>Select your Work Mode to Check In:`;
                     workModeButtons.forEach(b => b.classList.remove('selected'));
-                    const defaultModeBtn = document.querySelector('#student-mood-container .mood-option-btn[data-mood="office"]');
+                    const defaultModeBtn = document.querySelector('#employee-mood-container .mood-option-btn[data-mood="office"]');
                     if (defaultModeBtn) defaultModeBtn.classList.add('selected');
                     selectedWorkMode = 'office';
                     if (submitBtn) {
@@ -706,7 +706,7 @@ function initUnifiedLogin() {
                 } else if (data.state === 'checked_in') {
                     if (moodWelcomeText) moodWelcomeText.textContent = `Welcome, ${selectedEmployeeName}`;
                     if (selectTitle) selectTitle.innerHTML = `You checked in at <strong>${data.check_in_time}</strong>.<br>Ready to check out and log hours?`;
-                    const modeSelectGrid = document.querySelector('#student-mood-container .mood-selection-grid');
+                    const modeSelectGrid = document.querySelector('#employee-mood-container .mood-selection-grid');
                     if (modeSelectGrid) modeSelectGrid.style.display = 'none';
                     if (submitBtn) {
                         submitBtn.textContent = 'Check Out';
@@ -719,13 +719,13 @@ function initUnifiedLogin() {
                     if (keypadContainer) keypadContainer.style.display = 'none';
                     if (moodContainer) moodContainer.style.display = 'none';
                     
-                    const successCircle = document.getElementById('student-success-avatar-circle');
+                    const successCircle = document.getElementById('employee-success-avatar-circle');
                     if (successCircle) {
                         successCircle.textContent = getInitials(selectedEmployeeName);
                         successCircle.style.backgroundColor = selectedEmployeeColor;
                     }
                     
-                    const successMsg = document.getElementById('student-success-msg');
+                    const successMsg = document.getElementById('employee-success-msg');
                     if (successMsg) {
                         successMsg.innerHTML = `<strong>${selectedEmployeeName}</strong> is already checked out for today!<br>Total Hours Worked: <strong>${data.hours_worked} hrs</strong>`;
                     }
@@ -766,7 +766,7 @@ function initUnifiedLogin() {
         const action = submitBtn.getAttribute('data-action');
 
         const formData = new FormData();
-        formData.append('student_id', selectedEmployeeId);
+        formData.append('employee_id', selectedEmployeeId);
         formData.append('action', action);
         formData.append('mood', selectedWorkMode);
 
@@ -782,13 +782,13 @@ function initUnifiedLogin() {
             if (data.success) {
                 if (moodContainer) moodContainer.style.display = 'none';
                 
-                const successCircle = document.getElementById('student-success-avatar-circle');
+                const successCircle = document.getElementById('employee-success-avatar-circle');
                 if (successCircle) {
                     successCircle.textContent = getInitials(selectedEmployeeName);
                     successCircle.style.backgroundColor = selectedEmployeeColor;
                 }
                 
-                const successMsg = document.getElementById('student-success-msg');
+                const successMsg = document.getElementById('employee-success-msg');
                 if (successMsg) {
                     if (action === 'check_in') {
                         const lateLabel = data.status === 'late' ? ' (Late)' : '';
@@ -813,7 +813,7 @@ function initUnifiedLogin() {
         if (keypadContainer) keypadContainer.style.display = 'none';
         if (moodContainer) moodContainer.style.display = 'none';
         
-        const modeSelectGrid = document.querySelector('#student-mood-container .mood-selection-grid');
+        const modeSelectGrid = document.querySelector('#employee-mood-container .mood-selection-grid');
         if (modeSelectGrid) modeSelectGrid.style.display = 'grid'; // Reset display state
         
         if (successContainer) successContainer.style.display = 'none';

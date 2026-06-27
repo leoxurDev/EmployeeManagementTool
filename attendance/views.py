@@ -17,17 +17,18 @@ from .models import (
     AssignmentGroup, SupportEngineer, SupportTicket, TicketActivity, EmployeeSupportPermission,
     LeoxurEmail, LeoxurMessage, LeoxurTask, LeoxurTaskComment
 )
-from .forms import EmployeeForm
+from .forms import EmployeeForm, ManagerRegisterForm
 
 
 def get_or_seed_layout_blocks():
+    AppLayoutBlock.objects.filter(block_id='student_grid').update(block_id='employee_grid', title='Employee Roster Grid')
     blocks = AppLayoutBlock.objects.all().order_by('order')
     if not blocks.exists():
         default_blocks = [
             ('header', 'Branding Header', 1),
             ('classroom_tabs', 'Department Selection Tabs', 2),
             ('stats_banner', 'Roster Stats Banner', 3),
-            ('student_grid', 'Employee Roster Grid', 4)
+            ('employee_grid', 'Employee Roster Grid', 4)
         ]
         for bid, name, o in default_blocks:
             AppLayoutBlock.objects.create(block_id=bid, title=name, order=o, is_visible=True)
@@ -104,7 +105,7 @@ def employee_grid(request):
     if not selected_dept_name:
         selected_dept = all_depts.first()
         if not selected_dept:
-            return render(request, 'attendance/student_grid.html', {'error': 'No active departments found'})
+            return render(request, 'attendance/employee_grid.html', {'error': 'No active departments found'})
         selected_dept_name = selected_dept.name
         selected_dept_display = selected_dept.display_value
     else:
@@ -114,7 +115,7 @@ def employee_grid(request):
         except DepartmentOption.DoesNotExist:
             selected_dept = all_depts.first()
             if not selected_dept:
-                return render(request, 'attendance/student_grid.html', {'error': 'No active departments found'})
+                return render(request, 'attendance/employee_grid.html', {'error': 'No active departments found'})
             selected_dept_name = selected_dept.name
             selected_dept_display = selected_dept.display_value
         
@@ -144,11 +145,11 @@ def employee_grid(request):
     current_shift = Attendance.get_current_shift_by_time()
 
     context = {
-        'students': employees,  # template compatibility
+        'employees': employees,  # template compatibility
         'selected_classroom': selected_dept_display,
         'selected_classroom_name': selected_dept_name,
         'classrooms': depts_display,
-        'total_students': total_employees,
+        'total_employees': total_employees,
         'present_today': present_today,
         'attendance_rate': attendance_rate,
         'today': today,
@@ -156,12 +157,12 @@ def employee_grid(request):
         'layout_blocks': get_or_seed_layout_blocks(),
         'schedule_status': get_shift_schedule_status(),
     }
-    return render(request, 'attendance/student_grid.html', context)
+    return render(request, 'attendance/employee_grid.html', context)
 
 
 @require_POST
 def toggle_attendance(request):
-    employee_id = request.POST.get('student_id') or request.POST.get('employee_id')
+    employee_id = request.POST.get('employee_id')
     action = request.POST.get('action', 'check_in')  # 'check_in' or 'check_out'
     status = request.POST.get('status', 'present')
     work_mode = request.POST.get('mood', 'office')  # maps mood field to work_mode
@@ -216,7 +217,7 @@ def toggle_attendance(request):
             'mood_emoji': attendance.get_work_mode_display().split()[-1] if attendance.work_mode else '',
             'time': time_str,
             'action': 'created',
-            'student_id': employee_id
+            'employee_id': employee_id
         })
         
     elif action == 'check_out':
@@ -235,7 +236,7 @@ def toggle_attendance(request):
             'time': time_str,
             'hours_worked': attendance.hours_worked,
             'action': 'removed',  # maps to action in JS
-            'student_id': employee_id
+            'employee_id': employee_id
         })
         
     return JsonResponse({'success': False, 'error': 'Invalid action'}, status=400)
@@ -243,7 +244,7 @@ def toggle_attendance(request):
 
 @require_POST
 def verify_pin(request):
-    employee_id = request.POST.get('student_id') or request.POST.get('employee_id')
+    employee_id = request.POST.get('employee_id')
     pin_code = request.POST.get('pin_code')
     try:
         employee = Employee.objects.get(id=employee_id, is_active=True)
@@ -286,10 +287,10 @@ def verify_pin(request):
 
 def manager_login(request):
     from django.utils.http import url_has_allowed_host_and_scheme
-    next_url = request.GET.get('next') or request.POST.get('next') or 'teacher_dashboard'
+    next_url = request.GET.get('next') or request.POST.get('next') or 'manager_dashboard'
     if request.user.is_authenticated:
         if not url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
-            next_url = 'teacher_dashboard'
+            next_url = 'manager_dashboard'
         return redirect(next_url)
         
     employees = Employee.objects.filter(is_active=True).order_by('department', 'first_name')
@@ -305,19 +306,26 @@ def manager_login(request):
             if 'engineer_id' in request.session:
                 del request.session['engineer_id']
             messages.success(request, f"Welcome back, Manager {user.username}! 💼")
-            next_url = request.GET.get('next') or request.POST.get('next') or 'teacher_dashboard'
+            next_url = request.GET.get('next') or request.POST.get('next') or 'manager_dashboard'
             if not url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
-                next_url = 'teacher_dashboard'
+                next_url = 'manager_dashboard'
             return redirect(next_url)
         else:
             messages.error(request, "Invalid username or password. Please try again.")
     else:
         form = AuthenticationForm()
         
+    for field_name, field in form.fields.items():
+        field.widget.attrs.update({'class': 'form-input'})
+        if field_name == 'username':
+            field.widget.attrs.update({'placeholder': 'e.g. manager'})
+        elif field_name == 'password':
+            field.widget.attrs.update({'placeholder': '••••••••'})
+            
     context = {
         'form': form,
         'action': 'login',
-        'students': employees,
+        'employees': employees,
         'classrooms': depts,
         'schedule_status': get_shift_schedule_status(),
     }
@@ -327,27 +335,27 @@ def manager_login(request):
 def manager_register(request):
     if not request.user.is_authenticated or (not request.user.is_staff and not request.user.is_superuser):
         messages.error(request, "Access denied. Only administrators can register new manager accounts. 🔐")
-        return redirect('teacher_login')
+        return redirect('manager_login')
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = ManagerRegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
             messages.success(request, f"Manager account '{user.username}' created successfully! 💼")
-            return redirect('teacher_dashboard')
+            return redirect('manager_dashboard')
         else:
             messages.error(request, "Registration failed. Please correct the errors below.")
     else:
-        form = UserCreationForm()
+        form = ManagerRegisterForm()
     return render(request, 'attendance/login.html', {'form': form, 'action': 'register'})
 
 
 def manager_logout(request):
     auth_logout(request)
     messages.info(request, "You have been logged out. See you soon! 👋")
-    return redirect('student_grid')
+    return redirect('employee_grid')
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 def manager_dashboard(request):
     today = timezone.localdate()
     dept_filter = request.GET.get('classroom', 'All')
@@ -419,11 +427,11 @@ def manager_dashboard(request):
             tickets_list = SupportTicket.objects.all().order_by('-created_at')
 
     context = {
-        'students': employees,
+        'employees': employees,
         'today': today,
         'roster_date': roster_date,
         'roster_date_str': roster_date.strftime('%Y-%m-%d'),
-        'total_students': total_employees,
+        'total_employees': total_employees,
         'present_count': present_count,
         'late_count': late_count,
         'absent_count': absent_count,
@@ -435,24 +443,24 @@ def manager_dashboard(request):
         'can_raise_support': can_raise_support,
         'tickets_list': tickets_list,
     }
-    return render(request, 'attendance/teacher_dashboard.html', context)
+    return render(request, 'attendance/manager_dashboard.html', context)
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 def add_employee(request):
     if request.method == 'POST':
         form = EmployeeForm(request.POST)
         if form.is_valid():
             employee = form.save()
             messages.success(request, f"Welcome to the company, {employee.full_name}! 🎉")
-            return redirect('teacher_dashboard')
+            return redirect('manager_dashboard')
     else:
         form = EmployeeForm()
         
-    return render(request, 'attendance/student_form.html', {'form': form, 'title': 'Add New Employee 👔'})
+    return render(request, 'attendance/employee_form.html', {'form': form, 'title': 'Add New Employee 👔'})
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 def edit_employee(request, pk):
     employee = get_object_or_404(Employee, id=pk)
     if request.method == 'POST':
@@ -460,25 +468,25 @@ def edit_employee(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, f"Updated details for {employee.full_name}! 📝")
-            return redirect('teacher_dashboard')
+            return redirect('manager_dashboard')
     else:
         form = EmployeeForm(instance=employee)
         
-    return render(request, 'attendance/student_form.html', {'form': form, 'title': f'Edit Details for {employee.first_name} ✏️'})
+    return render(request, 'attendance/employee_form.html', {'form': form, 'title': f'Edit Details for {employee.first_name} ✏️'})
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 def delete_employee(request, pk):
     employee = get_object_or_404(Employee, id=pk)
     if request.method == 'POST':
         employee.is_active = False  # Soft delete
         employee.save()
         messages.warning(request, f"Goodbye {employee.full_name}! 👋")
-        return redirect('teacher_dashboard')
-    return render(request, 'attendance/student_confirm_delete.html', {'student': employee})
+        return redirect('manager_dashboard')
+    return render(request, 'attendance/employee_confirm_delete.html', {'employee': employee})
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 def export_attendance_csv(request):
     dept_filter = request.GET.get('classroom', 'All')
     
@@ -528,7 +536,7 @@ def export_attendance_csv(request):
     return response
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 def assign_roster_shift(request):
     date_str = request.POST.get('date')
     classroom = request.POST.get('classroom')
@@ -567,12 +575,12 @@ def assign_roster_shift(request):
     return redirect(redirect_url)
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 @ensure_csrf_cookie
 def admin_developer_page(request):
     if not request.user.is_staff and not request.user.is_superuser:
         messages.error(request, "Access denied. Only administrators can use the customizer page. 🔐")
-        return redirect('teacher_dashboard')
+        return redirect('manager_dashboard')
         
     # Handle permission toggle POST form
     if request.method == 'POST' and 'toggle_support_user_id' in request.POST:
@@ -588,11 +596,11 @@ def admin_developer_page(request):
     
     # Get all users to manage permissions
     all_users = User.objects.all().order_by('username')
-    teachers_permissions = []
+    managers_permissions = []
     for user in all_users:
         perm, created = EmployeeSupportPermission.objects.get_or_create(user=user)
         display_allowed = True if user.is_superuser else perm.can_raise_tickets
-        teachers_permissions.append({
+        managers_permissions.append({
             'user': user,
             'can_raise_tickets': display_allowed,
             'is_superuser': user.is_superuser
@@ -600,11 +608,11 @@ def admin_developer_page(request):
 
     return render(request, 'attendance/developer_page.html', {
         'layout_blocks': layout_blocks,
-        'teachers_permissions': teachers_permissions
+        'managers_permissions': managers_permissions
     })
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 @require_POST
 def save_layout(request):
     if not request.user.is_staff and not request.user.is_superuser:
@@ -624,7 +632,7 @@ def save_layout(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-@login_required(login_url='teacher_login')
+@login_required(login_url='manager_login')
 @require_POST
 def ai_chat_command(request):
     if not request.user.is_staff and not request.user.is_superuser:
@@ -644,11 +652,11 @@ def ai_chat_command(request):
         if api_key:
             system_prompt = (
                 "You are an AI assistant for an Employee Attendance app layout customizer. "
-                "Available blocks are: 'header', 'classroom_tabs', 'stats_banner', 'student_grid'.\n"
+                "Available blocks are: 'header', 'classroom_tabs', 'stats_banner', 'employee_grid'.\n"
                 "Understand the user request and map it to a JSON response of this exact schema:\n"
                 "{\n"
                 "  \"action\": \"hide\" | \"show\" | \"move_top\" | \"move_bottom\" | \"reset\",\n"
-                "  \"block\": \"header\" | \"classroom_tabs\" | \"stats_banner\" | \"student_grid\" | null,\n"
+                "  \"block\": \"header\" | \"classroom_tabs\" | \"stats_banner\" | \"employee_grid\" | null,\n"
                 "  \"reply\": \"A friendly short response to the user explaining what you did in corporate-like professional tone ✨\"\n"
                 "}\n"
                 "Only reply with the JSON block. Do not write explanation outside the JSON."
@@ -699,7 +707,7 @@ def ai_chat_command(request):
                     target_block = 'header'
                     message_response += "Header has been hidden."
                 elif any(x in user_message for x in ['grid', 'student', 'roster', 'employee', 'card']):
-                    target_block = 'student_grid'
+                    target_block = 'employee_grid'
                     message_response += "Employee grid has been hidden."
                 else:
                     action = None
@@ -715,7 +723,7 @@ def ai_chat_command(request):
                     target_block = 'header'
                     message_response += "Header is now visible."
                 elif any(x in user_message for x in ['grid', 'student', 'roster', 'employee', 'card']):
-                    target_block = 'student_grid'
+                    target_block = 'employee_grid'
                     message_response += "Employee grid is now visible."
                 else:
                     action = None
@@ -731,7 +739,7 @@ def ai_chat_command(request):
                     target_block = 'header'
                     message_response += "Header moved to the top."
                 elif any(x in user_message for x in ['grid', 'student', 'roster', 'employee', 'card']):
-                    target_block = 'student_grid'
+                    target_block = 'employee_grid'
                     message_response += "Employee grid moved to the top."
                 else:
                     action = None
@@ -747,14 +755,14 @@ def ai_chat_command(request):
                     target_block = 'header'
                     message_response += "Header moved to the bottom."
                 elif any(x in user_message for x in ['grid', 'student', 'roster', 'employee', 'card']):
-                    target_block = 'student_grid'
+                    target_block = 'employee_grid'
                     message_response += "Employee grid moved to the bottom."
                 else:
                     action = None
 
             if not action or (action != 'reset' and not target_block):
                 action = None
-                message_response = "I did not recognize that command. Try 'hide stats banner', 'move student_grid to top', or 'reset layout'!"
+                message_response = "I did not recognize that command. Try 'hide stats banner', 'move employee_grid to top', or 'reset layout'!"
         
         if action:
             if action == 'hide' and target_block:
@@ -774,7 +782,7 @@ def ai_chat_command(request):
                     b.order = idx + 1
                     b.save()
             elif action == 'reset':
-                default_blocks = {'header': 1, 'classroom_tabs': 2, 'stats_banner': 3, 'student_grid': 4}
+                default_blocks = {'header': 1, 'classroom_tabs': 2, 'stats_banner': 3, 'employee_grid': 4}
                 for bid, o in default_blocks.items():
                     AppLayoutBlock.objects.filter(block_id=bid).update(order=o, is_visible=True)
         
@@ -870,7 +878,7 @@ def has_support_permission(user):
 
 def support_home(request):
     if not request.user.is_authenticated:
-        return redirect('teacher_login')
+        return redirect('manager_login')
     if not has_support_permission(request.user):
         messages.error(request, "Access denied. You do not have permission to raise support tickets. 🔐")
         return redirect('home')
@@ -920,7 +928,7 @@ def support_home(request):
 
 def support_ticket_view(request, number):
     if not request.user.is_authenticated:
-        return redirect('teacher_login')
+        return redirect('manager_login')
     if not has_support_permission(request.user):
         messages.error(request, "Access denied. You do not have permission to access support tickets. 🔐")
         return redirect('home')
@@ -1320,7 +1328,7 @@ def identity_manager(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         
-        if action == 'toggle_teacher_permission':
+        if action == 'toggle_manager_permission':
             user_id = request.POST.get('user_id')
             user_to_toggle = get_object_or_404(User, pk=user_id)
             perm, created = EmployeeSupportPermission.objects.get_or_create(user=user_to_toggle)
@@ -1573,18 +1581,37 @@ def leoxur_comm_data(request):
     participants = get_all_leoxur_participants()
     participant_map = {p['id']: p for p in participants}
     
-    # 1. Emails: sent to or received by the active user
-    emails_qs = LeoxurEmail.objects.filter(Q(sender_id=active_user_id) | Q(receiver_id=active_user_id)).order_by('-created_at')
+    # 1. Emails: sent to, received by, or CC'd to the active user
+    emails_qs = LeoxurEmail.objects.filter(
+        Q(sender_id=active_user_id) | 
+        Q(receiver_id=active_user_id) | 
+        Q(cc_id__icontains=active_user_id)
+    ).order_by('-created_at')
     emails = []
     for email in emails_qs:
         sender = participant_map.get(email.sender_id, {'name': email.sender_id, 'avatar_emoji': '✉️', 'avatar_color': '#9CA3AF'})
         receiver = participant_map.get(email.receiver_id, {'name': email.receiver_id, 'avatar_emoji': '✉️', 'avatar_color': '#9CA3AF'})
+        
+        # CC list serialization
+        cc_list = []
+        if email.cc_id:
+            for c_id in email.cc_id.split(','):
+                c_id_strip = c_id.strip()
+                if c_id_strip:
+                    p = participant_map.get(c_id_strip)
+                    if p:
+                        cc_list.append(p)
+                    else:
+                        cc_list.append({'name': c_id_strip, 'avatar_emoji': '✉️', 'avatar_color': '#9CA3AF'})
+                        
         emails.append({
             'id': email.id,
             'sender_id': email.sender_id,
             'sender': sender,
             'receiver_id': email.receiver_id,
             'receiver': receiver,
+            'cc_id': email.cc_id,
+            'cc_list': cc_list,
             'subject': email.subject,
             'body': email.body,
             'created_at': timezone.localtime(email.created_at).strftime('%b %d, %Y %I:%M %p'),
@@ -1694,6 +1721,7 @@ def leoxur_send_email(request):
     try:
         data = json.loads(request.body)
         receiver_id = data.get('receiver_id')
+        cc_id = data.get('cc_id', '').strip() or None
         subject = data.get('subject', '').strip()
         body = data.get('body', '').strip()
         
@@ -1703,6 +1731,7 @@ def leoxur_send_email(request):
         email = LeoxurEmail.objects.create(
             sender_id=active_user_id,
             receiver_id=receiver_id,
+            cc_id=cc_id,
             subject=subject,
             body=body
         )
@@ -1828,7 +1857,11 @@ def leoxur_update_task(request):
                 if task.status == 'in_review':
                     if not active_user_id.startswith('manager_'):
                         return JsonResponse({'success': False, 'error': 'Only managers can approve or reject issues in review.'}, status=403)
-                # 2. Assignee check: if assigned, only the assignee or a manager can move it
+                # 2. Archive check: only managers can change the state to archived
+                if new_status == 'archived':
+                    if not active_user_id.startswith('manager_'):
+                        return JsonResponse({'success': False, 'error': 'Only managers can archive issues.'}, status=403)
+                # 3. Assignee check: if assigned, only the assignee or a manager can move it
                 elif task.assignee_id and task.assignee_id != active_user_id and not active_user_id.startswith('manager_'):
                     return JsonResponse({'success': False, 'error': 'Only the assignee can change the status of this task.'}, status=403)
                 
@@ -1855,6 +1888,8 @@ def leoxur_delete_task(request):
     active_user_id = request.session.get('leoxur_user_id')
     if not active_user_id:
         return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    if not active_user_id.startswith('manager_'):
+        return JsonResponse({'success': False, 'error': 'Only managers can delete issues.'}, status=403)
         
     import json
     try:

@@ -83,9 +83,9 @@ class Employee(models.Model):
     is_active = models.BooleanField(default=True)
     date_created = models.DateTimeField(auto_now_add=True)
     pin_code = models.CharField(
-        max_length=4,
-        default="1234",
-        validators=[RegexValidator(r'^\d{4}$', 'PIN code must be exactly 4 digits.')]
+        max_length=6,
+        default="123456",
+        validators=[RegexValidator(r'^\d{6}$', 'PIN code must be exactly 6 digits.')]
     )
 
     def __str__(self):
@@ -365,6 +365,7 @@ class EmployeeSupportPermission(models.Model):
 class LeoxurEmail(models.Model):
     sender_id = models.CharField(max_length=50) # e.g. employee_1, manager_1, engineer_1
     receiver_id = models.CharField(max_length=50) # e.g. employee_2
+    cc_id = models.CharField(max_length=255, blank=True, null=True) # e.g. employee_3,manager_4
     subject = models.CharField(max_length=255)
     body = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

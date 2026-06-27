@@ -1581,4 +1581,144 @@
     overflow-y: auto;
 }
 
+/* Responsive Inline Details/Forms Pane for Tasks */
+.comm-inline-detail-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 1.5rem;
+    background: var(--comm-bg-main);
+    overflow: hidden;
+}
+
+.comm-inline-detail-pane .pane-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--comm-border);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+.comm-inline-detail-pane .pane-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.comm-inline-detail-pane .pane-task-id {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--comm-text-muted);
+    background: var(--comm-bg-muted);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.comm-inline-detail-pane .pane-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--comm-text-main);
+}
+
+.comm-inline-detail-pane .pane-header-right {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.comm-inline-detail-pane .pane-content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.comm-inline-detail-pane .pane-content-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.comm-inline-detail-pane .pane-content-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    background: var(--comm-bg-card);
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--comm-border);
+    height: fit-content;
+}
+
+.comm-inline-detail-pane .review-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #10b981;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.comm-inline-detail-pane .review-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.comm-inline-detail-pane .approve-btn {
+    background-color: #10b981 !important;
+    color: white !important;
+    font-weight: 700;
+}
+
+.comm-inline-detail-pane .reject-btn {
+    background-color: #ef4444 !important;
+    color: white !important;
+    font-weight: 700;
+}
+
+.comm-inline-detail-pane .task-meta-box {
+    font-size: 0.75rem;
+    color: var(--comm-text-muted);
+    border-top: 1px dashed var(--comm-border);
+    padding-top: 0.75rem;
+    line-height: 1.5;
+}
+
+.comm-inline-detail-pane .add-comment-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.comm-inline-detail-pane .add-comment-row input {
+    margin-bottom: 0;
+}
+
+/* Responsive grid layout */
+@media (max-width: 992px) {
+    .comm-inline-detail-pane .pane-content-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .comm-inline-detail-pane {
+        padding: 1rem;
+    }
+    .comm-inline-detail-pane .pane-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .comm-inline-detail-pane .pane-header-right {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
 

@@ -57,7 +57,7 @@ def seed_database():
     today = timezone.localdate()
     
     for emp_data in mock_employees:
-        pin = f"{1000 + count + 1}"
+        pin = f"{100000 + count + 1}"
         employee = Employee.objects.create(
             first_name=emp_data["first_name"],
             last_name=emp_data["last_name"],

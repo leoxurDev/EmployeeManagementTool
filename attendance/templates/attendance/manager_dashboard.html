@@ -12,21 +12,21 @@
         <p style="color: var(--text-muted); font-weight: 500;">Monitor employee attendance, shifts, and active rosters</p>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-        <a href="{% url 'export_student_csv' %}?classroom={{ selected_classroom|urlencode }}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+        <a href="{% url 'export_employee_csv' %}?classroom={{ selected_classroom|urlencode }}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
             Export CSV Logs
         </a>
         {% if request.user.is_staff or request.user.is_superuser %}
         <a href="{% url 'admin_developer_page' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem; border-color: var(--primary-color); color: var(--primary-color);">
             Customizer
         </a>
-        <a href="{% url 'teacher_register' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+        <a href="{% url 'manager_register' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
             Register Manager
         </a>
         {% endif %}
-        <a href="{% url 'add_student' %}" class="bubbly-btn primary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+        <a href="{% url 'add_employee' %}" class="bubbly-btn primary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
             Add Employee
         </a>
-        <a href="{% url 'teacher_logout' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem; border-color: var(--danger-color); color: var(--danger-color);">
+        <a href="{% url 'manager_logout' %}" class="bubbly-btn secondary-btn" style="padding: 0.6rem 1.2rem; font-size: 0.9rem; border-color: var(--danger-color); color: var(--danger-color);">
             Logout
         </a>
     </div>
@@ -112,7 +112,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for employee in students %}
+                {% for employee in employees %}
                 <tr>
                     <td>
                         <div class="employee-row-info">
@@ -188,8 +188,8 @@
 
 <!-- 1. Cards View -->
 <div id="roster-grid-view" class="kids-grid-container" style="display: grid;">
-    {% for employee in students %}
-    <div class="kid-card" data-student-id="{{ employee.id }}" style="--kid-color: {{ employee.avatar_color }}; cursor: default;">
+    {% for employee in employees %}
+    <div class="kid-card" data-employee-id="{{ employee.id }}" style="--kid-color: {{ employee.avatar_color }}; cursor: default;">
         <div class="kid-avatar-wrapper" style="width: 68px; height: 68px; font-size: 1.2rem; margin-bottom: 0.75rem;">
             <span class="kid-emoji">{{ employee.initials }}</span>
             <div class="status-indicator-badge" style="width: auto; min-width: 24px; padding: 0 4px; border-radius: 9999px; font-size: 0.65rem; font-weight: 800;">
@@ -204,7 +204,7 @@
         <h2 class="kid-name" style="font-size: 1.1rem; margin-bottom: 0.25rem;">{{ employee.full_name }}</h2>
         <p style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem; background-color: var(--bg-color); padding: 0.2rem 0.5rem; border-radius: 4px;">
             PIN: 
-            <span class="pin-digits-hidden">••••</span>
+            <span class="pin-digits-hidden">••••••</span>
             <span class="pin-digits-shown" style="display: none;">{{ employee.pin_code }}</span>
             <button class="pin-toggle-btn" style="background: none; border: none; cursor: pointer; font-size: 0.85rem; margin-left: 0.25rem;">Show</button>
         </p>
@@ -223,22 +223,22 @@
 
         <!-- Attendance Status Override buttons -->
         <div class="status-actions-cell" style="width: 100%; justify-content: center; border-top: 1px solid var(--border-color); padding-top: 0.75rem; margin-top: auto;">
-            <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'present' %}active{% endif %}" data-student="{{ employee.id }}" data-status="present">
+            <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'present' %}active{% endif %}" data-employee="{{ employee.id }}" data-status="present">
                 Active
             </button>
-            <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'late' %}active{% endif %}" data-student="{{ employee.id }}" data-status="late">
+            <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'late' %}active{% endif %}" data-employee="{{ employee.id }}" data-status="late">
                 Late
             </button>
-            <button class="status-action-btn {% if not employee.today_status or employee.today_status.status == 'absent' %}active{% endif %}" data-student="{{ employee.id }}" data-status="absent">
+            <button class="status-action-btn {% if not employee.today_status or employee.today_status.status == 'absent' %}active{% endif %}" data-employee="{{ employee.id }}" data-status="absent">
                 Absent
             </button>
         </div>
 
         <!-- CRUD Actions -->
         <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-            <a href="{% url 'edit_student' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--primary-color);">Edit</a>
+            <a href="{% url 'edit_employee' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--primary-color);">Edit</a>
             <span style="color: var(--border-color);">|</span>
-            <a href="{% url 'delete_student' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--danger-color);">Remove</a>
+            <a href="{% url 'delete_employee' employee.id %}" style="text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--danger-color);">Remove</a>
         </div>
     </div>
     {% endfor %}
@@ -261,8 +261,8 @@
             </tr>
         </thead>
         <tbody>
-            {% for employee in students %}
-            <tr data-student-id="{{ employee.id }}">
+            {% for employee in employees %}
+            <tr data-employee-id="{{ employee.id }}">
                 <td>
                     <div class="employee-row-info">
                         <div class="employee-row-avatar" style="--avatar-color: {{ employee.avatar_color }}; font-size: 0.85rem; font-weight:800; display:flex; align-items:center; justify-content:center; color:#1e293b;">
@@ -275,7 +275,7 @@
                     </div>
                 </td>
                 <td>
-                    <span class="pin-digits-hidden">••••</span>
+                    <span class="pin-digits-hidden">••••••</span>
                     <span class="pin-digits-shown" style="display: none;">{{ employee.pin_code }}</span>
                     <button class="pin-toggle-btn" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; margin-left: 0.25rem;">Show</button>
                 </td>
@@ -321,9 +321,9 @@
                 </td>
                 <td>
                     <div class="status-actions-cell">
-                        <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'present' %}active{% endif %}" data-student="{{ employee.id }}" data-status="present">Present</button>
-                        <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'late' %}active{% endif %}" data-student="{{ employee.id }}" data-status="late">Late</button>
-                        <button class="status-action-btn {% if not employee.today_status or employee.today_status.status == 'absent' %}active{% endif %}" data-student="{{ employee.id }}" data-status="absent">Absent</button>
+                        <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'present' %}active{% endif %}" data-employee="{{ employee.id }}" data-status="present">Present</button>
+                        <button class="status-action-btn {% if employee.today_status and employee.today_status.status == 'late' %}active{% endif %}" data-employee="{{ employee.id }}" data-status="late">Late</button>
+                        <button class="status-action-btn {% if not employee.today_status or employee.today_status.status == 'absent' %}active{% endif %}" data-employee="{{ employee.id }}" data-status="absent">Absent</button>
                     </div>
                 </td>
             </tr>
@@ -375,9 +375,9 @@
                     </td>
                     <td>
                         <span class="shift-badge" style="font-weight: 800; 
-                            {% if t.priority == 'critical' %}background-color: var(--danger-light); color: var(--danger-color);
-                            {% elif t.priority == 'high' %}background-color: var(--warning-light); color: var(--warning-color);
-                            {% else %}background-color: var(--bg-color); color: var(--text-main);{% endif %}">
+                             {% if t.priority == 'critical' %}background-color: var(--danger-light); color: var(--danger-color);
+                             {% elif t.priority == 'high' %}background-color: var(--warning-light); color: var(--warning-color);
+                             {% else %}background-color: var(--bg-color); color: var(--text-main);{% endif %}">
                             {{ t.get_priority_display }}
                         </span>
                     </td>

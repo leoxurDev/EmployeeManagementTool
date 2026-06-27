@@ -94,7 +94,7 @@ graph TD
 | `DepartmentOption` | Active departments (name, emoji, order) |
 | `AvatarEmoji` | Emoji choices for employee avatars |
 | `AvatarColor` | Hex color choices for employee avatar backgrounds |
-| `Employee` | Employee profiles — name, department, 4-digit PIN, avatar |
+| `Employee` | Employee profiles — name, department, 6-digit PIN, avatar |
 | `Roster` | Shift assignments per employee per date (Morning / Afternoon / Night) |
 | `Attendance` | Daily check-in/out logs, work mode (Office / Remote / Field), status (Present / Late / Absent), hours worked |
 | `AppLayoutBlock` | Persistent block order/visibility for the kiosk page (used by Developer Customizer) |
@@ -152,7 +152,7 @@ The global **Shift Ticker Bar** (injected via `schedule_context_processor`) appe
 ### 2. Employee Time & Expense Kiosk (Grid)
 
 **URL:** `/grid/?classroom=<DepartmentName>`
-**Template:** [`attendance/student_grid.html`](attendance/templates/attendance/student_grid.html)
+**Template:** [`attendance/employee_grid.html`](attendance/templates/attendance/employee_grid.html)
 **View:** `employee_grid()`
 
 This is the self-service check-in station for employees, designed to be used on a shared terminal or tablet in a common area.
@@ -161,7 +161,7 @@ This is the self-service check-in station for employees, designed to be used on 
 
 - **Department Tabs** — Switch between active departments (Engineering, HR, Sales & Marketing, etc.). The tab list is dynamically populated from the `DepartmentOption` database table.
 - **Employee Cards** — Each active employee appears as a card showing their avatar emoji, colored background, name, rostered shift, and today's attendance status badge.
-- **PIN Verification Modal** — Clicking an employee card opens a secure 4-digit PIN keypad overlay. The PIN is verified via an AJAX call to `/verify-pin/`.
+- **PIN Verification Modal** — Clicking an employee card opens a secure 6-digit PIN keypad overlay. The PIN is verified via an AJAX call to `/verify-pin/`.
 - **Check-In Flow** — After PIN verification, if the employee has not yet checked in, they are shown their current state and a **Work Mode** selector:
   - 🏢 Office
   - 🏠 Remote
@@ -193,7 +193,7 @@ This is the self-service check-in station for employees, designed to be used on 
 ### 4. Manager Dashboard
 
 **URL:** `/manager/`
-**Template:** [`attendance/teacher_dashboard.html`](attendance/templates/attendance/teacher_dashboard.html)
+**Template:** [`attendance/manager_dashboard.html`](attendance/templates/attendance/manager_dashboard.html)
 **View:** `manager_dashboard()` *(login required)*
 
 The central command panel for managers. Divided into several sections:
@@ -229,7 +229,7 @@ The central command panel for managers. Divided into several sections:
 **URL (Add):** `/manager/add/`
 **URL (Edit):** `/manager/edit/<id>/`
 **URL (Delete):** `/manager/delete/<id>/`
-**Templates:** [`student_form.html`](attendance/templates/attendance/student_form.html), [`student_confirm_delete.html`](attendance/templates/attendance/student_confirm_delete.html)
+**Templates:** [`employee_form.html`](attendance/templates/attendance/employee_form.html), [`employee_confirm_delete.html`](attendance/templates/attendance/employee_confirm_delete.html)
 **Views:** `add_employee()`, `edit_employee()`, `delete_employee()` *(all login required)*
 
 - **Add/Edit** uses `EmployeeForm` from [`attendance/forms.py`](attendance/forms.py), capturing:
@@ -237,7 +237,7 @@ The central command panel for managers. Divided into several sections:
   - Department (from active `DepartmentOption` records)
   - Avatar Emoji (from active `AvatarEmoji` records)
   - Avatar Color (from active `AvatarColor` records)
-  - 4-digit PIN code (validated with `RegexValidator`)
+  - 6-digit PIN code (validated with `RegexValidator`)
 - **Delete** is a **soft delete** — sets `employee.is_active = False` rather than removing the database record. This preserves all historical attendance and roster records for that employee.
 - All three views require manager login.
 
@@ -363,7 +363,7 @@ A fully integrated internal communication hub styled as a modern messaging app w
 
 **Authentication:**
 - Users log in by selecting their role and ID:
-  - **Employee** — e.g., `employee_1`, `employee_2` (requires 4-digit PIN)
+  - **Employee** — e.g., `employee_1`, `employee_2` (requires 6-digit PIN)
   - **Manager** — e.g., `manager_1` (requires Django password)
   - **Engineer** — e.g., `engineer_1`, `engineer_2` (requires engineer password)
 - Session is stored as `leoxur_user_id` in the Django session. Separate from manager and engineer auth.
@@ -447,7 +447,7 @@ A fully integrated internal communication hub styled as a modern messaging app w
   - `Branding Header` (`header`)
   - `Department Selection Tabs` (`classroom_tabs`)
   - `Roster Stats Banner` (`stats_banner`)
-  - `Employee Roster Grid` (`student_grid`)
+  - `Employee Roster Grid` (`employee_grid`)
 - **Drag-and-drop reordering** — drag blocks to change their display order on the kiosk page.
 - **Toggle visibility** — show or hide individual blocks.
 - Changes are saved immediately via `POST /manager/developer/save/` (AJAX, returns JSON).
@@ -456,7 +456,7 @@ A fully integrated internal communication hub styled as a modern messaging app w
 #### AI Chat Command Interface
 - Type natural language commands to control the kiosk layout:
   - `"hide the stats banner"` → Hides `stats_banner` block.
-  - `"move student grid to top"` → Moves `student_grid` to order position 1.
+  - `"move employee grid to top"` → Moves `employee_grid` to order position 1.
   - `"show department tabs"` → Makes `classroom_tabs` visible again.
   - `"reset layout"` → Restores all blocks to default order and visibility.
 - **Powered by Gemini 2.5 Flash API** — enter your API key in the UI for full natural language understanding.
@@ -899,112 +899,65 @@ Open the server's public IP in your browser to confirm the update is live.
 
 ---
 
-## 🗄 Migrating Database (SQLite to PostgreSQL)
+## 🗄 Migrating / Configuring Database (MySQL)
 
-For robust production deployments, it is recommended to migrate the SQLite database to **PostgreSQL**. Since this project runs inside Docker containers, follow this step-by-step guide to migrate your active SQLite data to PostgreSQL:
+By default, the application runs on **SQLite** (using `db.sqlite3` in the project root). For robust production deployments, it is highly recommended to use **MySQL**. 
 
-### Step 1 — Export Active SQLite Data
-Run Django's `dumpdata` tool to export the database content to a JSON file. Exclude the auto-seeded content types and auth permissions to avoid duplicate key violations when importing to PostgreSQL:
+The application is pre-configured to detect MySQL configurations via environment variables and use it dynamically via `pymysql` (a pure Python MySQL adapter, meaning no native binary compilation is required).
+
+### ⚡ Automatic Setup with docker-compose
+If you deploy using `docker-compose`, a pre-configured MySQL 8.0 service container is already defined and linked to the web container in `docker-compose.yml`. 
+The `deploy.sh` script will automatically prompt you for your preferred database engine, write the credentials to a `.env` file, spin up the containers, run migrations, and seed the initial data.
+
+---
+
+### 🛠 Manual Configuration Steps
+
+#### Step 1 — Export Active SQLite Data (Optional)
+If you have existing data in SQLite that you want to move to MySQL, export it using Django's `dumpdata`:
 ```bash
 # If running inside Docker:
 docker-compose exec web python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.Permission --indent 4 > datadump.json
 
-# If running locally in a virtual environment:
+# If running locally:
 python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.Permission --indent 4 > datadump.json
 ```
 
-### Step 2 — Update Python Dependencies
-Add `psycopg2-binary` (the PostgreSQL database adapter) to `requirements.txt`:
-```text
-django>=4.0
-whitenoise>=6.0.0
-psycopg2-binary>=2.9.0
+#### Step 2 — Configure Environment Variables
+Set the following environment variables (either in your `.env` file, shell profile, or container configuration):
+```ini
+DB_ENGINE=mysql
+DB_NAME=employee_manage
+DB_USER=employee_user
+DB_PASSWORD=employeepassword
+DB_HOST=127.0.0.1
+DB_PORT=3306
 ```
-Then rebuild your Docker containers:
+
+#### Step 3 — Install Dependencies
+Ensure `pymysql` and `cryptography` are installed (already included in `requirements.txt`):
 ```bash
-docker-compose build
+pip install -r requirements.txt
 ```
 
-### Step 3 — Update docker-compose.yml
-Add a PostgreSQL service to your `docker-compose.yml` configuration:
-```yaml
-services:
-  db:
-    image: postgres:15-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_DB=employee_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres_secure_pass
-    restart: always
-
-  web:
-    build: .
-    ports:
-      - "80:8000"
-    depends_on:
-      - db
-    env_file:
-      - .env
-    environment:
-      - APP_NAME=${APP_NAME:-My Organization}
-      - DB_HOST=db
-      - DB_NAME=employee_db
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres_secure_pass
-    restart: always
-
-volumes:
-  postgres_data:
-```
-
-### Step 4 — Update DATABASES Settings
-Modify the `DATABASES` configuration in `employee_attendance/settings.py` to dynamically switch to PostgreSQL when environment configurations are present:
-```python
-import os
-
-DB_HOST = os.environ.get('DB_HOST')
-
-if DB_HOST:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'employee_db'),
-            'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres_secure_pass'),
-            'HOST': DB_HOST,
-            'PORT': os.environ.get('DB_PORT', '5432'),
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-```
-
-### Step 5 — Spin up PostgreSQL and Apply migrations
-Start your containers:
+#### Step 4 — Run Migrations
+Run migrations on your MySQL database instance:
 ```bash
-docker-compose up -d db
-docker-compose up -d web
-```
-Apply the empty tables schema to PostgreSQL:
-```bash
-docker-compose exec web python manage.py migrate
+python manage.py migrate
 ```
 
-### Step 6 — Import Data
-To avoid foreign key conflicts with pre-created contenttypes, purge the default contenttypes generated during the migration step, then run `loaddata`:
+#### Step 5 — Import Seed Data or Restore Dump (Optional)
+To load the exported SQLite data into your MySQL database:
 ```bash
-# 1. Clear auto-generated content types
-docker-compose exec web python manage.py shell -c "from django.contrib.contenttypes.models import ContentType; ContentType.objects.all().delete()"
+# 1. Clear auto-generated content types first to avoid unique key conflicts
+python manage.py shell -c "from django.contrib.contenttypes.models import ContentType; ContentType.objects.all().delete()"
 
-# 2. Import your dumped SQLite data
-docker-compose exec web python manage.py loaddata datadump.json
+# 2. Import the JSON dump
+python manage.py loaddata datadump.json
+```
+If starting fresh, seed the default configurations:
+```bash
+python manage.py seed_configurations
 ```
 
 ---
@@ -1071,11 +1024,11 @@ EmployeeManagementTool/
 │   │   └── attendance/
 │   │       ├── base.html                # Global layout (shift ticker, nav)
 │   │       ├── home.html                # Landing page
-│   │       ├── student_grid.html        # Employee kiosk check-in
-│   │       ├── teacher_dashboard.html   # Manager dashboard
+│   │       ├── employee_grid.html       # Employee kiosk check-in
+│   │       ├── manager_dashboard.html   # Manager dashboard
 │   │       ├── login.html               # Manager login/register
-│   │       ├── student_form.html        # Add/edit employee form
-│   │       ├── student_confirm_delete.html
+│   │       ├── employee_form.html       # Add/edit employee form
+│   │       ├── employee_confirm_delete.html
 │   │       ├── developer_page.html      # Admin customizer & AI chat
 │   │       ├── leoxur_comm.html         # Mails, Chat & Tasks suite
 │   │       ├── support_home.html        # IT support client portal
@@ -1118,6 +1071,18 @@ EmployeeManagementTool/
 ├── seed_data.py                         # Sample employee/roster/attendance seeder
 └── db.sqlite3                           # SQLite database file (DO NOT DELETE in production)
 ```
+
+---
+
+## 🚀 Release Notes & Latest Updates (v1.2.0)
+
+The latest version of the Employee Time & Management Portal introduces critical security patches, refined UI configurations, and advanced collaborative tools:
+
+- **Enhanced Access Security**: Upgraded the Kiosk system login to require a secure **6-digit PIN** instead of the previous 4-digit setup.
+- **Flexible Database Deployments**: Interactive `deploy.sh` script now supports seamless setup and migrations for both standard **SQLite** and containerized **MySQL 8.0** databases.
+- **Refined Tech Themes**: Restructured the visual layout with a custom slate-indigo color scheme for both **Light Mode** and **Dark Mode** toggle configurations. Emojis and liquid glass styles have been fully stripped for a clean corporate vibe.
+- **Email CC Multi-recipient support**: Added custom database mapping and multi-select recipient search selectors to include CC'd users in Leoxur email delivery streams.
+- **Responsive Inline Dashboard Panes**: Replaced task board creation and edit overlay popups with dedicated inline split-column grids (input content on left, sidebar attributes on right) designed to scroll independently and scale smoothly across desktop, tablet, and mobile views.
 
 ---
 

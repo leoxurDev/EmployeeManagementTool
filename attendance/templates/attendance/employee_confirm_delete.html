@@ -9,7 +9,7 @@
     <div class="modal-header-section" style="margin-bottom: 1.75rem;">
         <h2 style="font-size: 1.5rem; font-weight: 850; color: var(--text-main);">Deactivate Employee Profile</h2>
         <p style="margin-top: 0.5rem; font-weight: 600;">
-            Are you sure you want to deactivate the profile for <strong>{{ student.full_name }}</strong>?
+            Are you sure you want to deactivate the profile for <strong>{{ employee.full_name }}</strong>?
         </p>
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem; font-weight: 500;">
             This will hide the employee from the daily check-in kiosk and rosters, but historical logs will remain intact.
@@ -19,7 +19,7 @@
     <form method="POST">
         {% csrf_token %}
         <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
-            <a href="{% url 'teacher_dashboard' %}" class="bubbly-btn secondary-btn" style="padding: 0.65rem 1.5rem;">
+            <a href="{% url 'manager_dashboard' %}" class="bubbly-btn secondary-btn" style="padding: 0.65rem 1.5rem;">
                 Cancel
             </a>
             <button type="submit" class="bubbly-btn primary-btn" style="background-color: var(--danger-color); padding: 0.65rem 1.5rem;">

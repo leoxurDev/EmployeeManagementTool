@@ -14,7 +14,7 @@
         <p>Employee Time & Expense Portal</p>
     </div>
 
-    <a href="{% url 'teacher_dashboard' %}" class="bubbly-btn secondary-btn admin-badge-btn">
+    <a href="{% url 'manager_dashboard' %}" class="bubbly-btn secondary-btn admin-badge-btn">
         Manager Portal
     </a>
 </div>
@@ -32,7 +32,7 @@
 <!-- Interactive Stats Banner -->
 <div class="stats-cloud-banner">
     <div class="stat-pill">
-        <span class="stat-pill-text"><strong>{{ total_students }}</strong> Employees registered</span>
+        <span class="stat-pill-text"><strong>{{ total_employees }}</strong> Employees registered</span>
     </div>
     <div class="stat-pill">
         <span class="stat-pill-text"><strong>{{ present_today }}</strong> On shift today</span>
@@ -44,10 +44,10 @@
         <span class="progress-percent-text">{{ attendance_rate }}% Active</span>
     </div>
 </div>
-{% elif block.block_id == 'student_grid' %}
+{% elif block.block_id == 'employee_grid' %}
 <!-- Employees Grid -->
 <div class="kids-grid-container">
-    {% for employee in students %}
+    {% for employee in employees %}
     <div class="kid-card {% if employee.today_status %}checked-in{% endif %} {% if employee.today_status and employee.today_status.status == 'late' %}checked-in-late{% endif %}"
         data-id="{{ employee.id }}" data-name="{{ employee.first_name }}" style="--kid-color: {{ employee.avatar_color }}">
 
@@ -90,7 +90,7 @@
     <div class="empty-classroom-card">
         <h2>No Employees registered</h2>
         <p>There are no active employees assigned to the <strong>{{ selected_classroom }}</strong> department yet.</p>
-        <a href="{% url 'add_student' %}" class="bubbly-btn primary-btn"
+        <a href="{% url 'add_employee' %}" class="bubbly-btn primary-btn"
             style="margin-top: 1rem; display: inline-block;">
             Add an Employee
         </a>
@@ -108,11 +108,13 @@
         <div id="pin-screen-container">
             <div class="modal-header-section">
                 <h2 id="pin-modal-welcome-text">Hi User!</h2>
-                <p>Enter your 4-digit PIN</p>
+                <p>Enter your 6-digit PIN</p>
             </div>
 
             <!-- Visual Dots for PIN Code digits -->
             <div class="pin-dots-container">
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
                 <div class="pin-dot"></div>
                 <div class="pin-dot"></div>
                 <div class="pin-dot"></div>

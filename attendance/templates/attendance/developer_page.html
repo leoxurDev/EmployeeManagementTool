@@ -14,10 +14,10 @@
         </div>
         
         <div class="admin-nav-buttons">
-            <a href="{% url 'teacher_dashboard' %}" class="bubbly-btn primary-btn">
-                Back to Teacher Portal
+            <a href="{% url 'manager_dashboard' %}" class="bubbly-btn primary-btn">
+                Back to Manager Portal
             </a>
-            <a href="{% url 'student_grid' %}" class="bubbly-btn secondary-btn">
+            <a href="{% url 'employee_grid' %}" class="bubbly-btn secondary-btn">
                 Check-in Grid Screen
             </a>
         </div>
@@ -94,7 +94,7 @@
                     Hi! I am your AI Page Customizer, powered by Gemini 3.5 Flash!<br><br>
                     You can type instructions to change the check-in screen layout. For example:<br>
                     • <em>"Hide the stats banner"</em><br>
-                    • <em>"Move the student grid to the top"</em><br>
+                    • <em>"Move the employee grid to the top"</em><br>
                     • <em>"Reset layout back to default"</em>
                 </div>
             </div>
@@ -113,9 +113,9 @@
     <!-- FULL-WIDTH SECTION: TEACHER SUPPORT PERMISSIONS -->
     <div class="dev-card permissions-card" style="grid-column: 1 / -1; background: #ffffff; border: var(--border-thickness) solid #cbd5e1; border-radius: 32px; padding: 2rem; box-shadow: var(--card-shadow); margin-top: 2rem;">
         <h2 style="font-family: 'Fredoka', sans-serif; color: #1e3a8a; margin-top: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.6rem;">
-            Teacher Support Ticket Permissions
+            Manager Support Ticket Permissions
         </h2>
-        <p style="font-weight: 600; color: #64748b; margin-bottom: 2rem;">Toggle ticket-raising permissions for each teacher. Superusers are automatically permitted.</p>
+        <p style="font-weight: 600; color: #64748b; margin-bottom: 2rem;">Toggle ticket-raising permissions for each manager. Superusers are automatically permitted.</p>
 
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-family: 'Quicksand', sans-serif; font-size: 1.05rem;">
@@ -128,7 +128,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in teachers_permissions %}
+                    {% for item in managers_permissions %}
                         <tr style="border-bottom: 1.5px solid #f1f5f9; transition: background-color 0.2s;">
                             <td style="padding: 1rem; font-weight: bold; color: #334155;">{{ item.user.username }}</td>
                             <td style="padding: 1rem; color: #64748b;">
@@ -137,7 +137,7 @@
                                 {% elif item.user.is_staff %}
                                     <span style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">Staff Admin</span>
                                 {% else %}
-                                    <span style="background: #e0f2fe; color: #0369a1; padding: 0.25rem 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">Teacher</span>
+                                    <span style="background: #e0f2fe; color: #0369a1; padding: 0.25rem 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">Manager</span>
                                 {% endif %}
                             </td>
                             <td style="padding: 1rem;">

@@ -6,24 +6,24 @@
 {% block content %}
 <div class="login-card">
     <div class="login-tab-container">
-        <div class="login-tab-slider"></div>
-        <button id="tab-student" class="login-tab-btn active">Employee Time & Expense</button>
-        <button id="tab-teacher" class="login-tab-btn">Manager Login</button>
+        <div class="login-tab-slider" style="left: {% if action == 'register' or form.errors %}calc(50% - 0.35rem){% else %}0.35rem{% endif %};"></div>
+        <button id="tab-employee" class="login-tab-btn {% if action == 'login' and not form.errors %}active{% endif %}">Employee Time & Expense</button>
+        <button id="tab-manager" class="login-tab-btn {% if action == 'register' or form.errors %}active{% endif %}">Manager Login</button>
     </div>
 
     <!-- SECTION 1: EMPLOYEE PIN CHECK-IN -->
-    <div id="student-login-section" style="display: block;">
+    <div id="employee-login-section" style="display: {% if action == 'login' and not form.errors %}block{% else %}none{% endif %};">
         <div class="modal-header-section" style="margin-bottom: 1.5rem;">
             <h2>Employee Time & Expense</h2>
             <p>Select your profile from the list to begin shift registration</p>
         </div>
 
         <!-- Dropdown Selector Group -->
-        <div class="form-group" id="student-select-group">
-            <label for="student-select">Select Your Profile</label>
-            <select id="student-select" class="form-select">
+        <div class="form-group" id="employee-select-group">
+            <label for="employee-select">Select Your Profile</label>
+            <select id="employee-select" class="form-select">
                 <option value="" selected disabled>-- Choose Your Name --</option>
-                {% for emp in students %}
+                {% for emp in employees %}
                 <option value="{{ emp.id }}" data-name="{{ emp.first_name }}" data-emoji="{{ emp.avatar_emoji }}" data-color="{{ emp.avatar_color }}">
                     {{ emp.full_name }} ({{ emp.department }})
                 </option>
@@ -32,9 +32,9 @@
         </div>
 
         <!-- Secure Keypad (Initially Hidden) -->
-        <div id="student-keypad-container" style="display: none;">
+        <div id="employee-keypad-container" style="display: none;">
             <div class="modal-header-section">
-                <p>Enter your 4-digit PIN</p>
+                <p>Enter your 6-digit PIN</p>
             </div>
             
             <div class="pin-dots-container">
@@ -42,34 +42,36 @@
                 <div class="pin-dot"></div>
                 <div class="pin-dot"></div>
                 <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
             </div>
 
-            <div class="pin-error-message" id="student-pin-error-msg">Wrong PIN!</div>
+            <div class="pin-error-message" id="employee-pin-error-msg">Wrong PIN!</div>
 
             <div class="pin-keypad-grid">
-                <button class="keypad-btn student-key" data-val="1">1</button>
-                <button class="keypad-btn student-key" data-val="2">2</button>
-                <button class="keypad-btn student-key" data-val="3">3</button>
-                <button class="keypad-btn student-key" data-val="4">4</button>
-                <button class="keypad-btn student-key" data-val="5">5</button>
-                <button class="keypad-btn student-key" data-val="6">6</button>
-                <button class="keypad-btn student-key" data-val="7">7</button>
-                <button class="keypad-btn student-key" data-val="8">8</button>
-                <button class="keypad-btn student-key" data-val="9">9</button>
-                <button class="keypad-btn student-key action-key" data-action="clear">Clear</button>
-                <button class="keypad-btn student-key" data-val="0">0</button>
-                <button class="keypad-btn student-key action-key" data-action="backspace">⌫</button>
+                <button class="keypad-btn employee-key" data-val="1">1</button>
+                <button class="keypad-btn employee-key" data-val="2">2</button>
+                <button class="keypad-btn employee-key" data-val="3">3</button>
+                <button class="keypad-btn employee-key" data-val="4">4</button>
+                <button class="keypad-btn employee-key" data-val="5">5</button>
+                <button class="keypad-btn employee-key" data-val="6">6</button>
+                <button class="keypad-btn employee-key" data-val="7">7</button>
+                <button class="keypad-btn employee-key" data-val="8">8</button>
+                <button class="keypad-btn employee-key" data-val="9">9</button>
+                <button class="keypad-btn employee-key action-key" data-action="clear">Clear</button>
+                <button class="keypad-btn employee-key" data-val="0">0</button>
+                <button class="keypad-btn employee-key action-key" data-action="backspace">⌫</button>
             </div>
 
             <div class="modal-actions-wrapper">
-                <button class="bubbly-btn cancel-btn" id="student-reset-btn">Cancel</button>
+                <button class="bubbly-btn cancel-btn" id="employee-reset-btn">Cancel</button>
             </div>
         </div>
 
         <!-- Work Mode Selection (Initially Hidden) -->
-        <div id="student-mood-container" style="display: none;">
+        <div id="employee-mood-container" style="display: none;">
             <div class="modal-header-section">
-                <h2 id="student-mood-welcome">Hi, Employee!</h2>
+                <h2 id="employee-mood-welcome">Hi, Employee!</h2>
                 <p>Select your work mode for today's shift:</p>
             </div>
 
@@ -86,35 +88,35 @@
             </div>
 
             <div class="modal-actions-wrapper">
-                <button class="bubbly-btn cancel-btn" id="student-reset-btn">Cancel</button>
-                <button class="bubbly-btn primary-btn" id="student-submit-checkin" data-action="check_in">
+                <button class="bubbly-btn cancel-btn" id="employee-reset-btn">Cancel</button>
+                <button class="bubbly-btn primary-btn" id="employee-submit-checkin" data-action="check_in">
                     Check In
                 </button>
             </div>
         </div>
 
         <!-- Success Details Screen (Initially Hidden) -->
-        <div id="student-success-container" style="display: none; text-align: center; padding: 1rem 0;">
-            <div id="student-success-avatar-circle" class="kid-avatar-wrapper" style="width: 90px; height: 90px; font-size: 1.5rem; font-weight: 800; margin: 0 auto 1.5rem auto; display: flex; align-items: center; justify-content: center;">
+        <div id="employee-success-container" style="display: none; text-align: center; padding: 1rem 0;">
+            <div id="employee-success-avatar-circle" class="kid-avatar-wrapper" style="width: 90px; height: 90px; font-size: 1.5rem; font-weight: 800; margin: 0 auto 1.5rem auto; display: flex; align-items: center; justify-content: center;">
             </div>
             <h2 style="font-weight: 850; margin-bottom: 0.5rem;">Shift Registered!</h2>
-            <p id="student-success-msg" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; font-weight: 600; margin-bottom: 1.75rem;">
+            <p id="employee-success-msg" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; font-weight: 600; margin-bottom: 1.75rem;">
                 Successfully logged!
             </p>
-            <button class="bubbly-btn primary-btn" id="student-reset-btn" style="width: 100%;">
+            <button class="bubbly-btn primary-btn" id="employee-reset-btn" style="width: 100%;">
                 Done
             </button>
         </div>
     </div>
 
-    <!-- SECTION 2: MANAGER LOGIN -->
-    <div id="teacher-login-section" style="display: none;">
+    <!-- SECTION 2: MANAGER LOGIN / REGISTER -->
+    <div id="manager-login-section" style="display: {% if action == 'register' or form.errors %}block{% else %}none{% endif %};">
         <div class="modal-header-section" style="margin-bottom: 1.5rem;">
-            <h2>Manager Portal Access</h2>
-            <p>Enter your management credentials to access administration tools</p>
+            <h2>{% if action == 'login' %}Manager Portal Access{% else %}Register Manager Account{% endif %}</h2>
+            <p>{% if action == 'login' %}Enter your management credentials to access administration tools{% else %}Fill out the details below to create a new manager profile{% endif %}</p>
         </div>
 
-        <form method="POST" action="{% if action == 'login' %}{% url 'teacher_login' %}{% else %}{% url 'teacher_register' %}{% endif %}">
+        <form method="POST" action="{% if action == 'login' %}{% url 'manager_login' %}{% else %}{% url 'manager_register' %}{% endif %}">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.GET.next }}">
             {% if form.non_field_errors %}
@@ -125,21 +127,18 @@
             </div>
             {% endif %}
 
-            <div class="form-group">
-                <label for="id_username">Username</label>
-                <input type="text" name="username" id="id_username" class="form-input" placeholder="e.g. manager" required>
-                {% if form.username.errors %}
-                <span style="color: var(--danger-color); font-size: 0.8rem; font-weight: 700;">{{ form.username.errors }}</span>
+            {% for field in form %}
+            <div class="form-group" {% if forloop.last %}style="margin-bottom: 1.5rem;"{% endif %}>
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <span style="color: var(--danger-color); font-size: 0.8rem; font-weight: 700;">{{ field.errors }}</span>
+                {% endif %}
+                {% if field.help_text %}
+                <small style="color: var(--text-muted); font-size: 0.75rem; font-weight: 500; display: block; margin-top: 0.25rem;">{{ field.help_text }}</small>
                 {% endif %}
             </div>
-
-            <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label for="id_password">Password</label>
-                <input type="password" name="password" id="id_password" class="form-input" placeholder="••••••••" required>
-                {% if form.password.errors %}
-                <span style="color: var(--danger-color); font-size: 0.8rem; font-weight: 700;">{{ form.password.errors }}</span>
-                {% endif %}
-            </div>
+            {% endfor %}
 
             <button type="submit" class="bubbly-btn primary-btn" style="width: 100%; padding: 0.8rem 0;">
                 {% if action == 'login' %}Sign In{% else %}Register{% endif %}
@@ -148,7 +147,7 @@
 
         {% if action == 'register' %}
         <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">
-            Want to go back? <a href="{% url 'teacher_login' %}" style="color: var(--primary-color); text-decoration: none;">Login here</a>
+            Want to go back? <a href="{% url 'manager_login' %}" style="color: var(--primary-color); text-decoration: none;">Login here</a>
         </div>
         {% endif %}
     </div>

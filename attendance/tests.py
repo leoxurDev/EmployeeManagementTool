@@ -22,30 +22,30 @@ class EmployeePINCodeTests(TestCase):
             department="Engineering",
             avatar_emoji="💼",
             avatar_color="#A0C4FF",
-            pin_code="1234"
+            pin_code="123456"
         )
 
     def test_valid_pin_code(self):
         self.employee.full_clean()
         
-        self.employee.pin_code = "9876"
+        self.employee.pin_code = "987654"
         self.employee.full_clean()  # Should not raise ValidationError
 
     def test_invalid_pin_code_length(self):
-        self.employee.pin_code = "123"
-        with self.assertRaises(ValidationError):
-            self.employee.full_clean()
-
         self.employee.pin_code = "12345"
         with self.assertRaises(ValidationError):
             self.employee.full_clean()
 
-    def test_invalid_pin_code_chars(self):
-        self.employee.pin_code = "abcd"
+        self.employee.pin_code = "1234567"
         with self.assertRaises(ValidationError):
             self.employee.full_clean()
 
-        self.employee.pin_code = "12a4"
+    def test_invalid_pin_code_chars(self):
+        self.employee.pin_code = "abcdef"
+        with self.assertRaises(ValidationError):
+            self.employee.full_clean()
+
+        self.employee.pin_code = "123a56"
         with self.assertRaises(ValidationError):
             self.employee.full_clean()
 
@@ -59,14 +59,14 @@ class EmployeePINVerifyAPITests(TestCase):
             department="Engineering",
             avatar_emoji="💼",
             avatar_color="#A0C4FF",
-            pin_code="1234"
+            pin_code="123456"
         )
 
     def test_verify_pin_success(self):
         url = reverse('verify_pin')
         response = self.client.post(url, {
-            'student_id': self.employee.id,
-            'pin_code': '1234'
+            'employee_id': self.employee.id,
+            'pin_code': '123456'
         })
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -75,8 +75,8 @@ class EmployeePINVerifyAPITests(TestCase):
     def test_verify_pin_failure(self):
         url = reverse('verify_pin')
         response = self.client.post(url, {
-            'student_id': self.employee.id,
-            'pin_code': '1111'
+            'employee_id': self.employee.id,
+            'pin_code': '111111'
         })
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -86,8 +86,8 @@ class EmployeePINVerifyAPITests(TestCase):
     def test_verify_pin_non_existent_employee(self):
         url = reverse('verify_pin')
         response = self.client.post(url, {
-            'student_id': 99999,
-            'pin_code': '1234'
+            'employee_id': 99999,
+            'pin_code': '123456'
         })
         self.assertEqual(response.status_code, 404)
         data = response.json()
@@ -98,7 +98,7 @@ class ManagerAuthenticationTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.manager_user = User.objects.create_user(
-            username='teacher_test',
+            username='manager_test',
             email='test@company.com',
             password='testpassword123'
         )
@@ -109,27 +109,27 @@ class ManagerAuthenticationTests(TestCase):
             department="Engineering",
             avatar_emoji="💼",
             avatar_color="#CAFFBF",
-            pin_code="1002"
+            pin_code="100002"
         )
 
     def test_unauthenticated_redirect(self):
-        url = reverse('teacher_dashboard')
+        url = reverse('manager_dashboard')
         response = self.client.get(url)
-        self.assertRedirects(response, reverse('teacher_login') + f"?next={url}")
+        self.assertRedirects(response, reverse('manager_login') + f"?next={url}")
 
     def test_manager_login_success(self):
-        url = reverse('teacher_login')
+        url = reverse('manager_login')
         response = self.client.post(url, {
-            'username': 'teacher_test',
+            'username': 'manager_test',
             'password': 'testpassword123'
         })
-        self.assertRedirects(response, reverse('teacher_dashboard'))
+        self.assertRedirects(response, reverse('manager_dashboard'))
         self.assertTrue(response.wsgi_request.user.is_authenticated)
 
     def test_manager_login_failure(self):
-        url = reverse('teacher_login')
+        url = reverse('manager_login')
         response = self.client.post(url, {
-            'username': 'teacher_test',
+            'username': 'manager_test',
             'password': 'wrong_password'
         })
         self.assertEqual(response.status_code, 200)
@@ -142,51 +142,54 @@ class ManagerAuthenticationTests(TestCase):
             password='adminpassword123'
         )
         self.client.login(username='admin_register_test', password='adminpassword123')
-        url = reverse('teacher_register')
+        url = reverse('manager_register')
         response = self.client.post(url, {
-            'username': 'new_teacher',
+            'username': 'new_manager',
+            'first_name': 'New',
+            'last_name': 'Manager',
+            'email': 'new_manager@company.com',
             'password1': 'newpassword123',
             'password2': 'newpassword123'
         })
-        self.assertRedirects(response, reverse('teacher_dashboard'))
-        self.assertTrue(User.objects.filter(username='new_teacher').exists())
+        self.assertRedirects(response, reverse('manager_dashboard'))
+        self.assertTrue(User.objects.filter(username='new_manager').exists())
 
     def test_manager_logout(self):
-        self.client.login(username='teacher_test', password='testpassword123')
+        self.client.login(username='manager_test', password='testpassword123')
         self.assertTrue(self.client.session.keys())
         
-        url = reverse('teacher_logout')
+        url = reverse('manager_logout')
         response = self.client.get(url)
-        self.assertRedirects(response, reverse('student_grid'))
+        self.assertRedirects(response, reverse('employee_grid'))
         
-        dashboard_url = reverse('teacher_dashboard')
+        dashboard_url = reverse('manager_dashboard')
         dashboard_response = self.client.get(dashboard_url)
-        self.assertRedirects(dashboard_response, reverse('teacher_login') + f"?next={dashboard_url}")
+        self.assertRedirects(dashboard_response, reverse('manager_login') + f"?next={dashboard_url}")
 
     def test_unified_login_context(self):
         url = reverse('unified_login')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertIn('students', response.context)
+        self.assertIn('employees', response.context)
         self.assertIn('classrooms', response.context)
 
     def test_manager_login_redirect_next_valid(self):
-        url = reverse('teacher_login')
+        url = reverse('manager_login')
         next_url = reverse('admin_developer_page')
         response = self.client.post(f"{url}?next={next_url}", {
-            'username': 'teacher_test',
+            'username': 'manager_test',
             'password': 'testpassword123'
         })
         self.assertRedirects(response, next_url, fetch_redirect_response=False)
 
     def test_manager_login_redirect_next_invalid_host(self):
-        url = reverse('teacher_login')
+        url = reverse('manager_login')
         next_url = "http://malicious.com/stolen"
         response = self.client.post(f"{url}?next={next_url}", {
-            'username': 'teacher_test',
+            'username': 'manager_test',
             'password': 'testpassword123'
         })
-        self.assertRedirects(response, reverse('teacher_dashboard'))
+        self.assertRedirects(response, reverse('manager_dashboard'))
 
 
 class DeveloperCustomizerTests(TestCase):
@@ -200,7 +203,7 @@ class DeveloperCustomizerTests(TestCase):
             is_superuser=True
         )
         self.regular_user = User.objects.create_user(
-            username='teacher_non_admin',
+            username='manager_non_admin',
             email='manager@company.com',
             password='password123'
         )
@@ -208,13 +211,13 @@ class DeveloperCustomizerTests(TestCase):
     def test_developer_page_unauthenticated_redirect(self):
         url = reverse('admin_developer_page')
         response = self.client.get(url)
-        self.assertRedirects(response, reverse('teacher_login') + f"?next={url}")
+        self.assertRedirects(response, reverse('manager_login') + f"?next={url}")
 
     def test_developer_page_non_staff_denied(self):
-        self.client.login(username='teacher_non_admin', password='password123')
+        self.client.login(username='manager_non_admin', password='password123')
         url = reverse('admin_developer_page')
         response = self.client.get(url)
-        self.assertRedirects(response, reverse('teacher_dashboard'))
+        self.assertRedirects(response, reverse('manager_dashboard'))
 
     def test_developer_page_staff_success(self):
         self.client.login(username='admin_test', password='adminpassword123')
@@ -234,7 +237,7 @@ class DeveloperCustomizerTests(TestCase):
                 {'id': 'stats_banner', 'order': 1, 'is_visible': False},
                 {'id': 'header', 'order': 2, 'is_visible': True},
                 {'id': 'classroom_tabs', 'order': 3, 'is_visible': True},
-                {'id': 'student_grid', 'order': 4, 'is_visible': True}
+                {'id': 'employee_grid', 'order': 4, 'is_visible': True}
             ]
         }
         response = self.client.post(
@@ -282,9 +285,9 @@ class TechSupportTests(TestCase):
         self.eng_data = SupportEngineer.objects.create(name="Data", email="data@enterprise.com")
         self.eng_data.groups.add(self.group_l3)
 
-        self.user = User.objects.create_user(username='test_teacher', password='password123', email='manager@company.com')
+        self.user = User.objects.create_user(username='test_manager', password='password123', email='manager@company.com')
         EmployeeSupportPermission.objects.create(user=self.user, can_raise_tickets=True)
-        self.client.login(username='test_teacher', password='password123')
+        self.client.login(username='test_manager', password='password123')
 
     def test_client_create_ticket_success(self):
         url = reverse('support_home')
@@ -413,7 +416,7 @@ class TechSupportTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Identity & Access Manager')
-        self.assertContains(response, 'test_teacher')
+        self.assertContains(response, 'test_manager')
         self.assertContains(response, 'Spock')
 
     def test_engineer_login_redirect_next_valid(self):
@@ -438,7 +441,7 @@ class TechSupportTests(TestCase):
         })
         self.assertRedirects(response, reverse('engineer_dashboard'), fetch_redirect_response=False)
 
-    def test_identity_manager_toggle_teacher(self):
+    def test_identity_manager_toggle_manager(self):
         session = self.client.session
         session['engineer_id'] = self.eng_spock.pk
         session.save()
@@ -448,7 +451,7 @@ class TechSupportTests(TestCase):
 
         url = reverse('identity_manager')
         response = self.client.post(url, {
-            'action': 'toggle_teacher_permission',
+            'action': 'toggle_manager_permission',
             'user_id': self.user.pk
         })
         self.assertRedirects(response, reverse('identity_manager'))
@@ -504,7 +507,7 @@ class LeoxurCommTests(TestCase):
             department="Engineering",
             avatar_emoji="💼",
             avatar_color="#A0C4FF",
-            pin_code="1001"
+            pin_code="100001"
         )
         self.engineer = SupportEngineer.objects.create(
             name="Spock",
@@ -533,7 +536,7 @@ class LeoxurCommTests(TestCase):
         url = reverse('leoxur_comm_auth')
         payload = {
             'user_id': f'employee_{self.employee.id}',
-            'secret': '1001'
+            'secret': '100001'
         }
         response = self.client.post(url, json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 200)
@@ -544,7 +547,7 @@ class LeoxurCommTests(TestCase):
         url = reverse('leoxur_comm_auth')
         payload = {
             'user_id': f'employee_{self.employee.id}',
-            'secret': '9999'
+            'secret': '999999'
         }
         response = self.client.post(url, json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 200)
@@ -608,6 +611,38 @@ class LeoxurCommTests(TestCase):
         response = self.client.get(data_url)
         email = response.json()['emails'][0]
         self.assertTrue(email['is_read'])
+
+    def test_send_email_with_cc(self):
+        # Authenticate manager
+        session = self.client.session
+        session['leoxur_user_id'] = f'manager_{self.manager_user.id}'
+        session.save()
+
+        # Send email to employee, CC to engineer
+        send_url = reverse('leoxur_send_email')
+        payload = {
+            'receiver_id': f'employee_{self.employee.id}',
+            'cc_id': f'engineer_{self.engineer.id}',
+            'subject': 'Project Discussion',
+            'body': 'Let\'s align on the new sprint objectives.'
+        }
+        response = self.client.post(send_url, json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+
+        # Authenticate engineer (who is CC'd) to verify they receive it in their inbox list
+        session['leoxur_user_id'] = f'engineer_{self.engineer.id}'
+        session.save()
+
+        data_url = reverse('leoxur_comm_data')
+        response = self.client.get(data_url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data['emails']), 1)
+        email = data['emails'][0]
+        self.assertEqual(email['cc_id'], f'engineer_{self.engineer.id}')
+        self.assertEqual(len(email['cc_list']), 1)
+        self.assertEqual(email['cc_list'][0]['name'], f"{self.engineer.name} (Support Engineer)")
 
     def test_chat_replies_quoting(self):
         session = self.client.session
@@ -780,6 +815,10 @@ class LeoxurWorkspaceTaskTests(TestCase):
         self.assertEqual(comm_data['tasks'][0]['assignee']['name'], 'Alice Smith (Employee - Engineering)')
 
         # Delete Task
+        session = self.client.session
+        session['leoxur_user_id'] = f'manager_{self.manager_user.id}'
+        session.save()
+        
         delete_url = reverse('leoxur_delete_task')
         response = self.client.post(delete_url, json.dumps({'task_id': task_id}), content_type='application/json')
         self.assertEqual(response.status_code, 200)
@@ -889,13 +928,34 @@ class LeoxurWorkspaceTaskTests(TestCase):
         unassigned_task.refresh_from_db()
         self.assertEqual(unassigned_task.status, 'in_progress')
 
+        # Test Archived status transition permissions
+        # 1. Employee (Alice) tries to change status to 'archived' - should fail
+        response = self.client.post(update_url, json.dumps({
+            'task_id': unassigned_task.id,
+            'status': 'archived'
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(response.json()['success'])
+
+        # 2. Manager tries to change status to 'archived' - should succeed
+        session['leoxur_user_id'] = f'manager_{self.manager_user.id}'
+        session.save()
+        response = self.client.post(update_url, json.dumps({
+            'task_id': unassigned_task.id,
+            'status': 'archived'
+        }), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        unassigned_task.refresh_from_db()
+        self.assertEqual(unassigned_task.status, 'archived')
+
     def test_portal_login_overrides_workspace_profile(self):
         session = self.client.session
         session['leoxur_user_id'] = 'engineer_99'
         session['engineer_id'] = 99
         session.save()
 
-        response = self.client.post(reverse('teacher_login'), {
+        response = self.client.post(reverse('manager_login'), {
             'username': self.manager_user.username,
             'password': 'testpassword123'
         })
@@ -948,7 +1008,7 @@ class DepartmentOptionTests(TestCase):
         )
         
         # Request grid with url encoded classroom parameter
-        response = self.client.get(reverse('student_grid') + '?classroom=Sales%20%26%20Marketing')
+        response = self.client.get(reverse('employee_grid') + '?classroom=Sales%20%26%20Marketing')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Jane Doe")
         self.assertEqual(response.context['selected_classroom_name'], "Sales & Marketing")
