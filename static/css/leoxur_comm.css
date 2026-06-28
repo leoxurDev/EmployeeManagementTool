@@ -906,6 +906,10 @@
    ============================================================================== */
 
 @media (max-width: 768px) {
+    .comm-outer-container {
+        padding: 0.5rem !important;
+    }
+
     .comm-dashboard-layout {
         grid-template-columns: 1fr;
         height: auto;
@@ -915,35 +919,38 @@
         border-right: none;
         border-bottom: 1px solid var(--comm-border);
         height: auto;
-        padding: 1rem;
+        padding: 0.75rem;
     }
     
     .comm-sidebar-brand {
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
         padding-bottom: 0.5rem;
     }
     
     .comm-user-profile {
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
         padding: 0.5rem;
     }
     
     .comm-nav-list {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
     }
     
     .comm-nav-item {
-        flex: 1;
-        min-width: 120px;
-        justify-content: center;
-        padding: 0.6rem 0.75rem;
-        font-size: 0.85rem;
+        min-width: 0 !important;
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 0.6rem 0.5rem !important;
+        font-size: 0.85rem !important;
+        box-sizing: border-box !important;
     }
     
     .comm-logout-btn {
-        margin-top: 0;
+        grid-column: span 2 !important;
+        margin-top: 0.25rem !important;
     }
     
     /* Split layouts stack vertically */
@@ -960,10 +967,34 @@
         overflow-y: auto;
     }
     
+    .mail-sidebar-header {
+        padding: 0.75rem !important;
+    }
+
+    .mail-item {
+        padding: 0.75rem !important;
+    }
+
     .mail-content-pane, .chat-pane {
         height: 480px;
     }
     
+    .mail-detail-header {
+        padding: 1rem !important;
+    }
+
+    .mail-detail-body {
+        padding: 1rem !important;
+    }
+
+    .chat-header {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .chat-input-area {
+        padding: 0.75rem 1rem !important;
+    }
+
     .chat-messages {
         padding: 1rem;
     }
@@ -972,6 +1003,31 @@
         max-width: 90%;
     }
     
+    /* Kanban Layout Overrides */
+    .tasks-layout {
+        padding: 0.75rem !important;
+    }
+
+    .kanban-column {
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0.5rem !important;
+    }
+
+    .task-card {
+        padding: 0.75rem !important;
+    }
+
+    /* Leo Notes Mobile Overrides */
+    .leonotes-sidebar-header {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .leonotes-textarea {
+        padding: 0.75rem !important;
+    }
+
     /* Make popup modal responsive */
     .comm-modal-card {
         width: 95%;

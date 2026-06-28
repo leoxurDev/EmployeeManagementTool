@@ -1199,6 +1199,9 @@ h1, h2, h3, h4, h5, h6, .brand-text, .school-logo-bubble h1, .modal-header-secti
 }
 
 @media (max-width: 768px) {
+    .main-wrapper {
+        padding: 0 0.5rem !important;
+    }
     .grid-header {
         flex-direction: column;
         align-items: flex-start;
