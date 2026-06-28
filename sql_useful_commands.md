@@ -10,11 +10,13 @@ Run this command in your main terminal to log in to the MySQL interactive shell:
 
 ### A. Login as Application User
 ```bash
+# Note: Replace user, password, and database name if you configured custom ones in deploy.sh
 docker exec -it employee_manage_db mysql -u employee_user -pemployeepassword employee_manage
 ```
 
 ### B. Login as Root Administrator
 ```bash
+# Note: Replace the password if you configured a custom one in deploy.sh
 docker exec -it employee_manage_db mysql -u root -prootpassword employee_manage
 ```
 

@@ -42,8 +42,8 @@ while true; do
 done
 
 if [ "$DB_ENGINE" = "mysql" ]; then
-    read -p "  Enter MySQL Database Host [127.0.0.1]: " DB_HOST
-    DB_HOST="${DB_HOST:-127.0.0.1}"
+    read -p "  Enter MySQL Database Host (use 'db' for containerized MySQL) [db]: " DB_HOST
+    DB_HOST="${DB_HOST:-db}"
     read -p "  Enter MySQL Database Port [3306]: " DB_PORT
     DB_PORT="${DB_PORT:-3306}"
     read -p "  Enter MySQL Database Name [employee_manage]: " DB_NAME

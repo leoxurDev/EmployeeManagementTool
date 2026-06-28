@@ -6,10 +6,10 @@ services:
     container_name: employee_manage_db
     restart: always
     environment:
-      MYSQL_DATABASE: employee_manage
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_USER: employee_user
-      MYSQL_PASSWORD: employeepassword
+      MYSQL_DATABASE: ${DB_NAME:-employee_manage}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      MYSQL_USER: ${DB_USER:-employee_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-employeepassword}
     ports:
       - "3306:3306"
     volumes:
@@ -25,12 +25,12 @@ services:
       - .env
     environment:
       - APP_NAME=${APP_NAME:-My Organization}
-      - DB_ENGINE=mysql
-      - DB_NAME=employee_manage
-      - DB_USER=employee_user
-      - DB_PASSWORD=employeepassword
-      - DB_HOST=db
-      - DB_PORT=3306
+      - DB_ENGINE=${DB_ENGINE:-mysql}
+      - DB_NAME=${DB_NAME:-employee_manage}
+      - DB_USER=${DB_USER:-employee_user}
+      - DB_PASSWORD=${DB_PASSWORD:-employeepassword}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-3306}
     restart: always
 
   phpmyadmin:
@@ -40,8 +40,10 @@ services:
     depends_on:
       - db
     environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
+      PMA_HOST: ${DB_HOST:-db}
+      PMA_PORT: ${DB_PORT:-3306}
+      PMA_USER: ${DB_USER:-employee_user}
+      PMA_PASSWORD: ${DB_PASSWORD:-employeepassword}
     ports:
       - "8080:80"
 
