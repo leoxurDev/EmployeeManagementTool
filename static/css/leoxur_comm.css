@@ -1721,4 +1721,41 @@
     }
 }
 
+/* Responsive overrides for Notes and Meetings layout on smaller screens */
+@media (max-width: 768px) {
+    .leonotes-layout {
+        flex-direction: column !important;
+        height: auto !important;
+    }
+    
+    .leonotes-sidebar {
+        width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--comm-border) !important;
+        height: 240px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .leonotes-editor-container {
+        height: 480px !important;
+    }
+    
+    .leonotes-toolbar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .leonotes-toolbar-actions {
+        width: 100% !important;
+        justify-content: space-between !important;
+    }
+    
+    .meetings-layout {
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+    }
+}
+
 

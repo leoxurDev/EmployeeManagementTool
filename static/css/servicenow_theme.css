@@ -231,7 +231,7 @@ body.servicenow-portal {
     border-radius: 6px;
     border: 1px solid var(--snow-border-color);
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    overflow: hidden;
+    overflow-x: auto;
 }
 
 .snow-table {
@@ -492,4 +492,88 @@ body.servicenow-portal {
     background-color: #fee2e2;
     border-color: #ef4444;
     color: #991b1b;
+}
+
+/* Responsive enhancements for mobile viewports */
+@media (max-width: 768px) {
+    .snow-header {
+        height: auto;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .snow-user-nav {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem;
+    }
+
+    .snow-wrapper {
+        flex-direction: column;
+    }
+
+    .snow-sidebar {
+        width: 100% !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .snow-sidebar-menu {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 0.5rem;
+    }
+
+    .snow-sidebar-section {
+        display: none !important; /* Hide section headings in mobile menu to save space */
+    }
+
+    .snow-sidebar-item {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .snow-sidebar-item a {
+        padding: 0.6rem 0.5rem;
+        justify-content: center;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        font-size: 0.8rem;
+    }
+
+    .snow-sidebar-item.active a {
+        border-bottom-color: #10b981;
+        background-color: var(--snow-sidebar-hover);
+    }
+
+    .snow-content {
+        padding: 1rem;
+    }
+
+    .simulation-banner {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .simulation-banner form {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .snow-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .snow-page-header .snow-btn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
 }
