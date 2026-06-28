@@ -35,6 +35,10 @@ docker-compose exec web python manage.py createsuperuser
 Open your browser and navigate to:
 *   **Web Portal**: `http://localhost/` (Port 80 mapped to container port 8000)
 *   **phpMyAdmin (Database Web UI)**: `http://localhost:8080/` (Port 8080 mapped to container port 80)
+*   **Prometheus**: `http://localhost:9090/` (Metrics repository)
+*   **Grafana**: `http://localhost:3000/` (Visualization UI - Login: `admin` / `admin@123`)
+*   **cAdvisor**: `http://localhost:8081/` (Docker container metrics viewer)
+*   **Node Exporter**: `http://localhost:9100/` (Host machines metrics collector)
 
 ---
 

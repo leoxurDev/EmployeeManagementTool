@@ -28,11 +28,13 @@ bash deploy.sh
 
 ## 🔒 Inbound Firewall Rules (All Cloud Providers)
 
-For the application to be accessible from the internet, you must open the following inbound ports in your VM's firewall, security group, or network security group:
+For the application and monitoring stack to be accessible, you must configure the following inbound ports in your VM's firewall, security group, or network security group:
 
 *   **Port 22 (SSH)**: To access your VM via terminal (restricted to your IP or VPN).
 *   **Port 80 (HTTP)**: To allow users to access the main Employee Portal.
-*   **Port 8080 (HTTP)**: To allow administrators to access the phpMyAdmin Web UI.
+*   **Port 8080 (HTTP)**: To allow administrators to access the phpMyAdmin Web UI (restricted to admin IPs).
+*   **Port 3000 (HTTP)**: To access the Grafana Metrics Dashboard (restricted to admin IPs).
+*   **Port 9090 (HTTP)**: To access Prometheus raw metrics (restricted to admin IPs).
 
 ---
 
