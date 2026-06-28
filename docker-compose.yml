@@ -42,8 +42,6 @@ services:
     environment:
       PMA_HOST: ${DB_HOST:-db}
       PMA_PORT: ${DB_PORT:-3306}
-      PMA_USER: ${DB_USER:-employee_user}
-      PMA_PASSWORD: ${DB_PASSWORD:-employeepassword}
     ports:
       - "8080:80"
 
