@@ -910,6 +910,14 @@
         padding: 0.5rem !important;
     }
 
+    .comm-nav-list.collapsed {
+        display: none !important;
+    }
+
+    .comm-menu-toggle-btn {
+        display: flex !important;
+    }
+
     .comm-dashboard-layout {
         grid-template-columns: 1fr;
         height: auto;

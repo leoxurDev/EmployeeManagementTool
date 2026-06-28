@@ -71,20 +71,26 @@
             </div>
 
             <!-- Active User Profile Card -->
-            <div class="comm-user-profile">
-                <div id="active-user-avatar" class="comm-user-avatar"
-                    style="--avatar-color: {{ active_user.avatar_color|default:'#4F46E5' }}">
-                    {{ active_user.avatar_emoji|default:'👤' }}
-                </div>
-                <div class="comm-user-info">
-                    <div id="active-user-name" class="comm-user-name">{{ active_user.name|default:'Unauthenticated' }}
+            <div class="comm-user-profile" style="display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div id="active-user-avatar" class="comm-user-avatar"
+                        style="--avatar-color: {{ active_user.avatar_color|default:'#4F46E5' }}">
+                        {{ active_user.avatar_emoji|default:'👤' }}
                     </div>
-                    <div id="active-user-role" class="comm-user-role">{{ active_user.role|default:'Guest' }}</div>
+                    <div class="comm-user-info">
+                        <div id="active-user-name" class="comm-user-name">{{ active_user.name|default:'Unauthenticated' }}</div>
+                        <div id="active-user-role" class="comm-user-role">{{ active_user.role|default:'Guest' }}</div>
+                    </div>
                 </div>
+                <!-- Menu Toggle Button for Mobile -->
+                <button id="comm-menu-toggle-btn" onclick="toggleCommMobileMenu()" class="comm-menu-toggle-btn"
+                    style="display: none; background: var(--comm-primary-light); border: 1px solid var(--comm-border); color: var(--comm-primary); padding: 0.5rem 0.75rem; border-radius: 8px; font-weight: 700; font-size: 0.8rem; cursor: pointer; align-items: center; gap: 0.25rem;">
+                    Menu ☰
+                </button>
             </div>
 
             <!-- Navigation Links -->
-            <nav class="comm-nav-list">
+            <nav class="comm-nav-list collapsed">
                 <button class="comm-nav-item active" onclick="switchCommTab('mails')"
                     style="position: relative; display: flex; align-items: center; justify-content: space-between; width: 100%;">
                     <span>Leoxur Mails</span>
@@ -755,6 +761,20 @@
         }
     });
 
+    // Toggle the mobile navigation tabs collapsed menu
+    function toggleCommMobileMenu() {
+        const navList = document.querySelector('.comm-nav-list');
+        const toggleBtn = document.getElementById('comm-menu-toggle-btn');
+        if (navList) {
+            navList.classList.toggle('collapsed');
+            if (navList.classList.contains('collapsed')) {
+                if (toggleBtn) toggleBtn.innerHTML = 'Menu ☰';
+            } else {
+                if (toggleBtn) toggleBtn.innerHTML = 'Close ✕';
+            }
+        }
+    }
+
     // Plays a high-fidelity synthesized notification chime using the Web Audio API
     function playNotificationSound() {
         try {
@@ -1099,6 +1119,14 @@
         document.getElementById(`comm-tab-${tabName}`).classList.add('active');
 
         loadAllData();
+
+        // Auto collapse menu on mobile screens when a tab is selected
+        const navList = document.querySelector('.comm-nav-list');
+        const toggleBtn = document.getElementById('comm-menu-toggle-btn');
+        if (navList && window.innerWidth <= 768) {
+            navList.classList.add('collapsed');
+            if (toggleBtn) toggleBtn.innerHTML = 'Menu ☰';
+        }
     }
 
     /* ==============================================================================
