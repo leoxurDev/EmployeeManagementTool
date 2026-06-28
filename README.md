@@ -11,6 +11,7 @@ Please refer to the following sub-guides for detailed setups and functional refe
 *   💻 **[Local Development Setup Guide](docs/local_development.md)** — Step-by-step virtualenv, SQLite, and database seeding guide.
 *   🐳 **[Docker & Containers Guide](docs/docker_guide.md)** — Docker Compose, raw commands, and database volume resetting guide.
 *   ☁️ **[Cloud Deployment & Operations](docs/deployment.md)** — AWS EC2, Azure, and GCP setups, security checksheets, and deployment upgrades.
+*   📊 **[Monitoring Stack Guide](docs/monitoring.md)** — Prometheus, cAdvisor, Node Exporter, and Grafana dashboard guides.
 *   📚 **[Portal Features & Pages Manual](docs/features_guide.md)** — Functional overview of the Kiosk, Manager Dashboard, ITSM tickets, and Mails/Chat suite.
 *   🗄 **[Database Schema & Models Reference](docs/database_schema.md)** — Models schema descriptions, shift rules, and SQLite-to-MySQL data migration.
 *   🔗 **[API Routes & Assets Reference](docs/api_routes.md)** — Full URL patterns directory and CSS/JS asset layout.
@@ -137,6 +138,7 @@ The latest version of the Employee Time & Management Portal introduces critical 
 *   **Email CC Multi-recipient support**: Added custom database mapping and multi-select recipient search selectors to include CC'd users in Leoxur email delivery streams.
 *   **Responsive Inline Dashboard Panes**: Replaced task board creation and edit overlay popups with dedicated inline split-column grids designed to scroll independently and scale smoothly across desktop, tablet, and mobile views.
 *   **Workspace Mobile Collapse**: Configured tabs navigation list on mobile viewports to start collapsed under a toggleable menu bar, preventing screen clutter.
+*   **Integrated Monitoring Stack**: Deployed Prometheus, cAdvisor, Node Exporter, and Grafana (pre-provisioned with custom dashboards for container analytics and node resource utilization) to monitor live container networks and system health metrics.
 
 ---
 
