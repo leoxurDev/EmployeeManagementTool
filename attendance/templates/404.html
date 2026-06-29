@@ -1,0 +1,45 @@
+{% extends 'attendance/base.html' %}
+{% load static %}
+
+{% block title %}404 - Page Not Found | {{ app_name }}{% endblock %}
+
+{% block content %}
+<div
+    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 65vh; text-align: center; gap: 2rem; padding: 2rem 0;">
+
+    <div class="kid-card"
+        style="width: 550px; max-width: 95%; margin: 0 auto; text-align: center; padding: 3.5rem 2.5rem; align-items: center; --kid-color: var(--danger-color); border: 2px solid var(--border-color); border-radius: var(--radius-lg); background-color: var(--card-bg);">
+
+        <!-- 404 Badge/Avatar -->
+        <div class="kid-avatar-wrapper"
+            style="background-color: var(--danger-light); margin: 0 auto 1.5rem auto; width: 96px; height: 96px; font-size: 2.2rem; font-weight: 850; color: var(--danger-color); display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+            404
+        </div>
+
+        <!-- Heading -->
+        <h1
+            style="color: var(--text-main); font-weight: 900; font-size: 2.2rem; margin-bottom: 0.75rem; letter-spacing: -0.02em;">
+            Page Not Found</h1>
+
+        <!-- Description -->
+        <p
+            style="color: var(--text-muted); font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin-bottom: 2.5rem; max-width: 440px; margin-left: auto; margin-right: auto;">
+            The page you are looking for does not exist, has been moved, or is temporarily unavailable. Please verify
+            the URL or select a portal option below.
+        </p>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; width: 100%;">
+            <a href="{% url 'home' %}" class="bubbly-btn primary-btn"
+                style="padding: 0.85rem 2rem; border-radius: var(--radius-md); font-size: 1rem; text-decoration: none;">
+                Return to Home
+            </a>
+            <a href="{% url 'employee_grid' %}" class="bubbly-btn secondary-btn"
+                style="padding: 0.85rem 1.5rem; border-radius: var(--radius-md); font-size: 1rem; text-decoration: none;">
+                Timeclock Check In
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
