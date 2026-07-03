@@ -82,6 +82,22 @@ if git rev-parse --git-dir > /dev/null 2>&1; then
     echo ""
 fi
 
+# --- Ensure alertmanager.yml is a file to avoid Docker directory mount errors ---
+if [ -d alertmanager.yml ]; then
+    echo "  ⚠️  Found alertmanager.yml as a directory. Removing it..."
+    rm -rf alertmanager.yml
+fi
+
+if [ ! -f alertmanager.yml ]; then
+    if [ -f alertmanager.yml.template ]; then
+        echo "  📄  Initializing alertmanager.yml from template..."
+        cp alertmanager.yml.template alertmanager.yml
+    else
+        echo "  📄  Creating empty alertmanager.yml..."
+        touch alertmanager.yml
+    fi
+fi
+
 # --- Build and start Docker containers ---
 echo "  🐳  Building and starting Docker containers..."
 docker-compose up --build -d

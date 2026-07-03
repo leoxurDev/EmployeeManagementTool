@@ -121,6 +121,22 @@ systemctl reload nginx
 echo "  ✅  Nginx proxy for HTTP established."
 echo ""
 
+# --- Ensure alertmanager.yml is a file to avoid Docker directory mount errors ---
+if [ -d alertmanager.yml ]; then
+    echo "  ⚠️  Found alertmanager.yml as a directory. Removing it..."
+    rm -rf alertmanager.yml
+fi
+
+if [ ! -f alertmanager.yml ]; then
+    if [ -f alertmanager.yml.template ]; then
+        echo "  📄  Initializing alertmanager.yml from template..."
+        cp alertmanager.yml.template alertmanager.yml
+    else
+        echo "  📄  Creating empty alertmanager.yml..."
+        touch alertmanager.yml
+    fi
+fi
+
 # --- Restart Docker Containers ---
 echo "  🔄  Restarting docker containers with new port configuration..."
 if command -v docker-compose >/dev/null 2>&1; then

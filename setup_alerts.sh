@@ -58,6 +58,11 @@ done
 
 echo ""
 echo "  📄  Generating alertmanager.yml..."
+if [ -d alertmanager.yml ]; then
+    echo "  ⚠️  Found alertmanager.yml as a directory. Removing it..."
+    rm -rf alertmanager.yml
+fi
+
 if [ -f alertmanager.yml.template ]; then
     # Create alertmanager.yml replacing placeholders
     cp alertmanager.yml.template alertmanager.yml
