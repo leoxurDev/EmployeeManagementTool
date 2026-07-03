@@ -80,15 +80,13 @@ else
 fi
 
 echo ""
-echo "  🔄  Restarting Docker containers to apply alert configurations..."
+echo "  🔄  Restarting Alertmanager service to apply configurations..."
 if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose down || true
-    docker-compose up -d --build
+    docker-compose up -d --no-deps --force-recreate alertmanager
 elif docker compose version >/dev/null 2>&1; then
-    docker compose down || true
-    docker compose up -d --build
+    docker compose up -d --no-deps --force-recreate alertmanager
 else
-    echo "  ⚠️  docker-compose not found. Please restart containers manually."
+    echo "  ⚠️  docker-compose not found. Please restart the alertmanager container manually."
 fi
 
 echo ""
