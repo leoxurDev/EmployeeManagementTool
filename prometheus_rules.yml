@@ -18,3 +18,12 @@ groups:
         annotations:
           summary: "High memory usage on container: {{ $labels.name }}"
           description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% of host memory for more than 30 seconds."
+
+      - alert: ContainerDown
+        expr: time() - container_last_seen{name=~".+"} > 30
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} is DOWN"
+          description: "Container {{ $labels.name }} has not been seen for more than 30 seconds."
