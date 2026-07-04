@@ -3,18 +3,18 @@ groups:
     rules:
       - alert: ContainerCPUHigh
         expr: (sum(rate(container_cpu_usage_seconds_total{name=~".+"}[2m])) by (name) / on() group_left() machine_cpu_cores) * 100 >= 80
-        for: 2m
+        for: 30s
         labels:
           severity: warning
         annotations:
           summary: "High CPU usage on container: {{ $labels.name }}"
-          description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% CPU of host capacity for more than 2 minutes."
+          description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% CPU of host capacity for more than 30 seconds."
 
       - alert: ContainerMemoryHigh
         expr: (container_memory_working_set_bytes{name=~".+"} / on() group_left() machine_memory_bytes) * 100 >= 80
-        for: 2m
+        for: 30s
         labels:
           severity: warning
         annotations:
           summary: "High memory usage on container: {{ $labels.name }}"
-          description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% of host memory for more than 2 minutes."
+          description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% of host memory for more than 30 seconds."
