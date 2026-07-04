@@ -88,6 +88,16 @@ else
 fi
 echo ""
 
+# --- Stop Docker containers to free up Port 80 for Nginx ---
+echo "  🐳  Stopping docker containers to free up port 80..."
+if command -v docker-compose >/dev/null 2>&1; then
+    docker-compose down || true
+elif docker compose version >/dev/null 2>&1; then
+    docker compose down || true
+fi
+echo "  ✅  Docker containers stopped."
+echo ""
+
 # --- Apply Nginx Configuration ---
 echo "  🔧  Creating Nginx reverse proxy configuration..."
 NGINX_CONF="/etc/nginx/sites-available/employee_management"
@@ -116,8 +126,8 @@ rm -f /etc/nginx/sites-enabled/default
 # Test Nginx config
 nginx -t
 
-# Reload Nginx to apply changes
-systemctl reload nginx
+# Start/Restart Nginx to apply changes
+systemctl restart nginx
 echo "  ✅  Nginx proxy for HTTP established."
 echo ""
 
@@ -140,10 +150,8 @@ fi
 # --- Restart Docker Containers ---
 echo "  🔄  Restarting docker containers with new port configuration..."
 if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose down || true
     docker-compose up -d --build
 elif docker compose version >/dev/null 2>&1; then
-    docker compose down || true
     docker compose up -d --build
 else
     echo "  ⚠️   docker-compose command not found. Please restart your containers manually."
