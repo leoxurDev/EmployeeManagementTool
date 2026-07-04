@@ -18,7 +18,7 @@ receivers:
   - to: 'RECIPIENT_EMAIL_PLACEHOLDER'
     send_resolved: true
     headers:
-      subject: '{{ if eq .Status "firing" }}🚨 [FIRING]{{ else }}✅ [RESOLVED]{{ end }} {{ .CommonLabels.alertname }} — Leoxur Portal'
+      subject: '{{ if eq .Status "firing" }}🚨 [FIRING]{{ else }}✅ [RESOLVED]{{ end }} {{ .CommonLabels.alertname }} — EMS Portal'
     html: |
       <!DOCTYPE html>
       <html>
@@ -103,7 +103,7 @@ receivers:
         <div class="email-container">
           <div class="email-header">
             <h2>{{ if eq .Status "firing" }}🚨 ALERT FIRING{{ else }}✅ ALERT RESOLVED{{ end }}</h2>
-            <p>Leoxur Solutions Portal — Automated Monitoring Alert</p>
+            <p>EMS Portal — Automated Monitoring Alert</p>
           </div>
           <div class="email-body">
             {{ range .Alerts }}
@@ -129,7 +129,7 @@ receivers:
             {{ end }}
           </div>
           <div class="footer">
-            Sent by Prometheus Alertmanager • Leoxur Solutions Limited
+            Sent by Prometheus Alertmanager • EMS Portal
           </div>
         </div>
       </body>
