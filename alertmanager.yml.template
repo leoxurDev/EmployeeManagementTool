@@ -18,7 +18,7 @@ receivers:
   - to: 'RECIPIENT_EMAIL_PLACEHOLDER'
     send_resolved: true
     headers:
-      subject: '{{ if eq .Status "firing" }}🚨 [FIRING]{{ else }}✅ [RESOLVED]{{ end }} {{ .CommonLabels.alertname }} — EMS Portal'
+      subject: '{{ if eq .Status "firing" }}[FIRING]{{ else }}[RESOLVED]{{ end }} {{ .CommonLabels.alertname }} — EMS Portal'
     html: |
       <!DOCTYPE html>
       <html>
@@ -102,13 +102,13 @@ receivers:
       <body>
         <div class="email-container">
           <div class="email-header">
-            <h2>{{ if eq .Status "firing" }}🚨 ALERT FIRING{{ else }}✅ ALERT RESOLVED{{ end }}</h2>
+            <h2>{{ if eq .Status "firing" }}ALERT FIRING{{ else }}ALERT RESOLVED{{ end }}</h2>
             <p>EMS Portal — Automated Monitoring Alert</p>
           </div>
           <div class="email-body">
             {{ range .Alerts }}
               <div class="alert-card">
-                <div class="alert-title">🔥 {{ .Labels.alertname }}</div>
+                <div class="alert-title">{{ .Labels.alertname }}</div>
                 <div class="alert-field">
                   <span class="alert-label">Severity:</span>
                   <span class="alert-value">{{ .Labels.severity | toUpper }}</span>
