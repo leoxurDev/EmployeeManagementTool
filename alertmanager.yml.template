@@ -18,18 +18,119 @@ receivers:
   - to: 'RECIPIENT_EMAIL_PLACEHOLDER'
     send_resolved: true
     headers:
-      subject: '⚠️ [Alertmanager] {{ .Status | toUpper }} - {{ .CommonLabels.alertname }}'
+      subject: '{{ if eq .Status "firing" }}🚨 [FIRING]{{ else }}✅ [RESOLVED]{{ end }} {{ .CommonLabels.alertname }} — Leoxur Portal'
     html: |
-      <h3>🚨 Container Alert: {{ .Status | toUpper }}</h3>
-      <p>The following alerts were triggered:</p>
-      <ul>
-        {{ range .Alerts }}
-          <li>
-            <strong>Alert Name:</strong> {{ .Labels.alertname }}<br/>
-            <strong>Severity:</strong> {{ .Labels.severity }}<br/>
-            <strong>Summary:</strong> {{ .Annotations.summary }}<br/>
-            <strong>Description:</strong> {{ .Annotations.description }}<br/>
-            <strong>Started At:</strong> {{ .StartsAt }}<br/>
-          </li>
-        {{ end }}
-      </ul>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #F8FAFC;
+            color: #0F172A;
+            margin: 0;
+            padding: 20px;
+          }
+          .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+          }
+          .email-header {
+            background-color: {{ if eq .Status "firing" }}#EF4444{{ else }}#10B981{{ end }};
+            color: #ffffff;
+            padding: 24px;
+            text-align: center;
+          }
+          .email-header h2 {
+            margin: 0 0 8px 0;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+          }
+          .email-header p {
+            margin: 0;
+            font-size: 13px;
+            opacity: 0.9;
+          }
+          .email-body {
+            padding: 24px;
+          }
+          .alert-card {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-left: 4px solid {{ if eq .Status "firing" }}#EF4444{{ else }}#10B981{{ end }};
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+          }
+          .alert-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            color: #0F172A;
+          }
+          .alert-field {
+            margin-bottom: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+          }
+          .alert-label {
+            font-weight: 600;
+            color: #64748B;
+            display: inline-block;
+            width: 100px;
+          }
+          .alert-value {
+            color: #0F172A;
+          }
+          .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 11px;
+            color: #64748B;
+            border-top: 1px solid #E2E8F0;
+            background: #F8FAFC;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          <div class="email-header">
+            <h2>{{ if eq .Status "firing" }}🚨 ALERT FIRING{{ else }}✅ ALERT RESOLVED{{ end }}</h2>
+            <p>Leoxur Solutions Portal — Automated Monitoring Alert</p>
+          </div>
+          <div class="email-body">
+            {{ range .Alerts }}
+              <div class="alert-card">
+                <div class="alert-title">🔥 {{ .Labels.alertname }}</div>
+                <div class="alert-field">
+                  <span class="alert-label">Severity:</span>
+                  <span class="alert-value">{{ .Labels.severity | toUpper }}</span>
+                </div>
+                <div class="alert-field">
+                  <span class="alert-label">Summary:</span>
+                  <span class="alert-value">{{ .Annotations.summary }}</span>
+                </div>
+                <div class="alert-field">
+                  <span class="alert-label">Description:</span>
+                  <span class="alert-value">{{ .Annotations.description }}</span>
+                </div>
+                <div class="alert-field">
+                  <span class="alert-label">Started At:</span>
+                  <span class="alert-value">{{ .StartsAt }}</span>
+                </div>
+              </div>
+            {{ end }}
+          </div>
+          <div class="footer">
+            Sent by Prometheus Alertmanager • Leoxur Solutions Limited
+          </div>
+        </div>
+      </body>
+      </html>
