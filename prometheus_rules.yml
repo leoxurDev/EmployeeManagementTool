@@ -2,7 +2,7 @@ groups:
   - name: container_resource_alerts
     rules:
       - alert: ContainerCPUHigh
-        expr: (sum(rate(container_cpu_usage_seconds_total{name=~".+"}[2m])) by (name) / on() machine_cpu_cores) * 100 > 50
+        expr: (sum(rate(container_cpu_usage_seconds_total{name=~".+"}[2m])) by (name) / on() group_left() machine_cpu_cores) * 100 > 50
         for: 10s
         labels:
           severity: warning
@@ -11,7 +11,7 @@ groups:
           description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% CPU of host capacity for more than 10 seconds."
 
       - alert: ContainerMemoryHigh
-        expr: (container_memory_working_set_bytes{name=~".+"} / on() machine_memory_bytes) * 100 > 50
+        expr: (container_memory_working_set_bytes{name=~".+"} / on() group_left() machine_memory_bytes) * 100 > 50
         for: 10s
         labels:
           severity: warning
