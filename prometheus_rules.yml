@@ -2,19 +2,19 @@ groups:
   - name: container_resource_alerts
     rules:
       - alert: ContainerCPUHigh
-        expr: (sum(rate(container_cpu_usage_seconds_total{name=~".+"}[2m])) by (name) / on() machine_cpu_cores) * 100 > 80
-        for: 2m
+        expr: (sum(rate(container_cpu_usage_seconds_total{name=~".+"}[2m])) by (name) / on() machine_cpu_cores) * 100 > 50
+        for: 10s
         labels:
           severity: warning
         annotations:
           summary: "High CPU usage on container: {{ $labels.name }}"
-          description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% CPU of host capacity for more than 2 minutes."
+          description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% CPU of host capacity for more than 10 seconds."
 
       - alert: ContainerMemoryHigh
-        expr: (container_memory_working_set_bytes{name=~".+"} / on() machine_memory_bytes) * 100 > 80
-        for: 2m
+        expr: (container_memory_working_set_bytes{name=~".+"} / on() machine_memory_bytes) * 100 > 50
+        for: 10s
         labels:
           severity: warning
         annotations:
           summary: "High memory usage on container: {{ $labels.name }}"
-          description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% of host memory for more than 2 minutes."
+          description: "Container {{ $labels.name }} is using {{ $value | printf \"%.2f\" }}% of host memory for more than 10 seconds."
