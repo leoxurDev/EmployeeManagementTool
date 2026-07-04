@@ -10,8 +10,8 @@ Please refer to the following sub-guides for detailed setups and functional refe
 
 *   💻 **[Local Development Setup Guide](docs/local_development.md)** — Step-by-step virtualenv, SQLite, and database seeding guide.
 *   🐳 **[Docker & Containers Guide](docs/docker_guide.md)** — Docker Compose, raw commands, and database volume resetting guide.
-*   ☁️ **[Cloud Deployment & Operations](docs/deployment.md)** — AWS EC2, Azure, and GCP setups, security checksheets, and deployment upgrades.
-*   📊 **[Monitoring Stack Guide](docs/monitoring.md)** — Prometheus, cAdvisor, Node Exporter, and Grafana dashboard guides.
+*   ☁️ **[Cloud Deployment & Operations](docs/deployment.md)** — AWS EC2, Azure, and GCP setups, Nginx Reverse Proxy & Let's Encrypt SSL configuration, operations, and deployment upgrades.
+*   📊 **[Monitoring Stack Guide](docs/monitoring.md)** — Prometheus, cAdvisor, Node Exporter, Grafana dashboards, and Gmail alerting configuration.
 *   📚 **[Portal Features & Pages Manual](docs/features_guide.md)** — Functional overview of the Kiosk, Manager Dashboard, ITSM tickets, and Mails/Chat suite.
 *   🗄 **[Database Schema & Models Reference](docs/database_schema.md)** — Models schema descriptions, shift rules, and SQLite-to-MySQL data migration.
 *   🔗 **[API Routes & Assets Reference](docs/api_routes.md)** — Full URL patterns directory and CSS/JS asset layout.
@@ -119,6 +119,8 @@ EmployeeManagementTool/
 ├── Dockerfile                           # Docker image definition
 ├── docker-compose.yml                   # Docker Compose container definition
 ├── deploy.sh                            # Automated cloud VM deployment script
+├── deploy_domain.sh                     # Automated Nginx reverse-proxy & Let's Encrypt setup script
+├── setup_alerts.sh                      # Automated Gmail alerting configuration script
 ├── manage.py                            # Django entry point
 ├── requirements.txt                     # Dependencies
 └── seed_data.py                         # Local data seeder
@@ -139,6 +141,8 @@ The latest version of the Employee Time & Management Portal introduces critical 
 *   **Responsive Inline Dashboard Panes**: Replaced task board creation and edit overlay popups with dedicated inline split-column grids designed to scroll independently and scale smoothly across desktop, tablet, and mobile views.
 *   **Workspace Mobile Collapse**: Configured tabs navigation list on mobile viewports to start collapsed under a toggleable menu bar, preventing screen clutter.
 *   **Integrated Monitoring Stack**: Deployed Prometheus, cAdvisor, Node Exporter, and Grafana (pre-provisioned with custom dashboards for container analytics and node resource utilization) to monitor live container networks and system health metrics.
+*   **Automated SSL & Domain Configuration**: Added `deploy_domain.sh` to seamlessly configure host-level Nginx reverse-proxy routing and Let's Encrypt SSL certificates.
+*   **Gmail Alerts Setup**: Deployed `setup_alerts.sh` to configure Prometheus Alertmanager, pre-configured with a custom, styled HTML email template matching the EMS Portal design.
 
 ---
 

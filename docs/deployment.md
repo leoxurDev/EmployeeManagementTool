@@ -141,6 +141,34 @@ bash deploy.sh
 
 ---
 
+## 🌐 Production Domain & SSL Setup (Nginx + Let's Encrypt)
+
+If you want to host your application on a custom domain (e.g. `your-domain.duckdns.org` or `portal.company.com`) with secure HTTPS/SSL, use the automated script [`deploy_domain.sh`](../deploy_domain.sh).
+
+This script configures a host-level Nginx reverse-proxy to route public traffic (Port 80/443) to the containerized Gunicorn application and automates Let's Encrypt SSL registration.
+
+### Step-by-Step Domain and SSL Configuration:
+1.  **Configure Inbound Security Rules**:
+    *   Open Port `80` (HTTP) and Port `443` (HTTPS) to the public (`0.0.0.0/0`) on your cloud provider.
+2.  **Point DNS Record**:
+    *   Point your domain name's `A Record` to the public IP address of your VM.
+3.  **Run the Domain Setup Script**:
+    ```bash
+    sudo ./deploy_domain.sh
+    ```
+4.  **Interactive Prompts**:
+    *   Enter your target domain name (e.g. `your-domain.duckdns.org`).
+    *   Enter your email address (required by Let's Encrypt for certificate expiration alerts).
+5.  **What the script does**:
+    *   Updates the `.env` file with `ALLOWED_HOSTS` and security parameters.
+    *   Installs Nginx and Certbot on the host system.
+    *   Clears Port 80 container mapping to avoid conflict with Nginx.
+    *   Generates the Nginx server configuration under `/etc/nginx/sites-available/employee_management`.
+    *   Runs Certbot non-interactively to fetch and install Let's Encrypt certificates.
+    *   Restarts the Nginx service and Docker containers to apply the configuration.
+
+---
+
 ## 🔄 Updating an Existing Live Deployment
 
 Use these steps to roll out updates to your production or staging server without losing database records:

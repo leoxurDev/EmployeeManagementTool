@@ -71,3 +71,81 @@ docker-compose logs -f prometheus
 # View Grafana rendering logs
 docker-compose logs -f grafana
 ```
+
+---
+
+## 🔔 Gmail Alerting Configuration Setup
+
+The monitoring stack includes **Prometheus Alertmanager**, which is pre-configured to send high-priority alerts to your Gmail account when resource thresholds are breached or when a container stops.
+
+### Step-by-Step Gmail Alerting Configuration:
+1.  **Generate a Google App Password**:
+    Alertmanager cannot log in with your primary Google password. You must generate an App Password:
+    *   Go to [Google My Account](https://myaccount.google.com/).
+    *   Navigate to **Security** → **2-Step Verification** (ensure 2-step verification is enabled).
+    *   Scroll to the bottom, select **App passwords**, and create a new application named `Alertmanager`.
+    *   Copy the generated **16-character code** (ignoring spaces).
+2.  **Run the Alerts Setup Script**:
+    On your cloud VM terminal, run:
+    ```bash
+    ./setup_alerts.sh
+    ```
+3.  **Interactive Prompts**:
+    *   Enter the sender Gmail address (e.g. `sender@gmail.com`).
+    *   Enter the copied 16-character Gmail App Password.
+    *   Enter the recipient email address (where you want alerts to be sent).
+4.  **What the script does**:
+    *   Generates a custom `alertmanager.yml` file from the [template](../alertmanager.yml.template).
+    *   Applies a professional, branded HTML layout matching the **EMS Portal** color scheme.
+    *   Restarts the Alertmanager container.
+
+---
+
+## 📈 Alert Rules & Thresholds
+
+Alerts are defined inside [`prometheus_rules.yml`](../prometheus_rules.yml) and trigger under the following conditions:
+
+| Alert Name | Metric Expression | Threshold | Duration (`for`) | Severity |
+| --- | --- | --- | --- | --- |
+| **ContainerCPUHigh** | `sum(rate(container_cpu_usage_seconds_total))` | `>= 80%` of host capacity | `30 seconds` | Warning |
+| **ContainerMemoryHigh** | `container_memory_working_set_bytes` | `>= 80%` of host memory | `30 seconds` | Warning |
+| **ContainerDown** | `time() - last_over_time(container_last_seen[1h])` | Container missing | `30 seconds` + `10s eval` | Critical |
+
+*Note: The `last_over_time[1h]` function ensures that stopped/absent containers are successfully remembered and alert trigger evaluation remains active even after cAdvisor stops exporting their metrics.*
+
+---
+
+## 🧪 Testing Your Alert Pipeline
+
+To confirm that both alerts and **Resolved** emails are working correctly:
+
+### Test 1 — Triggering a manual alert (Instant)
+Run this command from your terminal to post a dummy test alert to the Alertmanager REST API:
+```bash
+curl -H "Content-Type: application/json" -d '[
+  {
+    "labels": {
+      "alertname": "EMSSystemCheck",
+      "severity": "critical"
+    },
+    "annotations": {
+      "summary": "Manual EMS alert system diagnostic check",
+      "description": "This is a diagnostic alert to verify that the EMS Portal style and HTML templates are rendering correctly in Alertmanager."
+    }
+  }
+]' http://localhost:9093/api/v2/alerts
+```
+Check your inbox after 15 seconds. You should receive a clean, styled HTML email with the subject: `[FIRING] EMSSystemCheck — EMS Portal`.
+
+### Test 2 — Triggering a real Container DOWN alert
+1.  Stop the phpMyAdmin container:
+    ```bash
+    docker-compose stop employee_manage_pma
+    ```
+2.  Wait **45 seconds**. You will receive an email notifying you that `employee_manage_pma` is down.
+3.  Start the container back up:
+    ```bash
+    docker-compose start employee_manage_pma
+    ```
+4.  Wait **30 seconds**. You will receive an automatic **RESOLVED** email!
+
