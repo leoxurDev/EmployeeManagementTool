@@ -137,7 +137,32 @@ docker-compose exec web python manage.py seed_configurations
 
 echo ""
 echo "  👤  Create the first superuser (admin) account:"
-docker-compose exec web python manage.py createsuperuser
+while true; do
+    read -p "  Enter admin username [admin]: " ADMIN_USER
+    ADMIN_USER="${ADMIN_USER:-admin}"
+    read -p "  Enter admin email [admin@example.com]: " ADMIN_EMAIL
+    ADMIN_EMAIL="${ADMIN_EMAIL:-admin@example.com}"
+    
+    # Prompt for password securely
+    read -sp "  Enter admin password (minimum 8 characters): " ADMIN_PASSWORD
+    echo ""
+    read -sp "  Confirm admin password: " ADMIN_PASSWORD_CONFIRM
+    echo ""
+    
+    if [ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]; then
+        echo "  ⚠️  Passwords do not match. Please try again."
+        echo ""
+        continue
+    elif [ ${#ADMIN_PASSWORD} -lt 8 ]; then
+        echo "  ⚠️  Password must be at least 8 characters long. Please try again."
+        echo ""
+        continue
+    fi
+    break
+done
+
+echo "  ⚙️   Creating superuser inside container..."
+docker-compose exec -T web env DJANGO_SUPERUSER_PASSWORD="$ADMIN_PASSWORD" python manage.py createsuperuser --username "$ADMIN_USER" --email "$ADMIN_EMAIL" --noinput || echo "  ⚠️  Superuser already exists or could not be created."
 
 echo ""
 echo "============================================================"
