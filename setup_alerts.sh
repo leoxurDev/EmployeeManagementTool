@@ -81,10 +81,14 @@ fi
 
 echo ""
 echo "  🔄  Restarting Alertmanager service to apply configurations..."
-if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose up -d --no-deps --force-recreate alertmanager
-elif docker compose version >/dev/null 2>&1; then
+if docker compose version >/dev/null 2>&1; then
+    echo "  🐳  Using docker compose (v2) to recreate container..."
     docker compose up -d --no-deps --force-recreate alertmanager
+elif command -v docker-compose >/dev/null 2>&1; then
+    echo "  🐳  Using legacy docker-compose (v1) with safe stop/rm fallback..."
+    docker-compose stop alertmanager || true
+    docker-compose rm -f alertmanager || true
+    docker-compose up -d alertmanager
 else
     echo "  ⚠️  docker-compose not found. Please restart the alertmanager container manually."
 fi

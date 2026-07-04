@@ -7,6 +7,16 @@
 
 set -e
 
+# --- Detect docker compose command ---
+if docker compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+else
+    echo "  ❌  Error: Neither 'docker compose' nor 'docker-compose' command was found."
+    exit 1
+fi
+
 echo ""
 echo "============================================================"
 echo "  Employee Time & Management Portal — Deployment Setup"
@@ -116,13 +126,13 @@ fi
 
 # --- Build and start Docker containers ---
 echo "  🐳  Building and starting Docker containers..."
-docker-compose up --build -d
+$DOCKER_COMPOSE_CMD up --build -d
 
 # --- Wait for database service to be ready ---
 echo "  ⏳  Waiting for database connection to be established..."
 MAX_ATTEMPTS=30
 ATTEMPT=1
-until docker-compose exec -T web python -c "
+until $DOCKER_COMPOSE_CMD exec -T web python -c "
 import os, sys, django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'employee_attendance.settings')
 django.setup()
@@ -145,11 +155,11 @@ done
 
 # --- Apply database migrations ---
 echo "  🗄️   Applying database migrations..."
-docker-compose exec web python manage.py migrate
+$DOCKER_COMPOSE_CMD exec web python manage.py migrate
 
 echo ""
 echo "  🌱  Seeding required configuration options..."
-docker-compose exec web python manage.py seed_configurations
+$DOCKER_COMPOSE_CMD exec web python manage.py seed_configurations
 
 echo ""
 echo "  👤  Create the first superuser (admin) account:"
@@ -178,7 +188,7 @@ while true; do
 done
 
 echo "  ⚙️   Creating superuser inside container..."
-docker-compose exec -T web env DJANGO_SUPERUSER_PASSWORD="$ADMIN_PASSWORD" python manage.py createsuperuser --username "$ADMIN_USER" --email "$ADMIN_EMAIL" --noinput || echo "  ⚠️  Superuser already exists or could not be created."
+$DOCKER_COMPOSE_CMD exec -T web env DJANGO_SUPERUSER_PASSWORD="$ADMIN_PASSWORD" python manage.py createsuperuser --username "$ADMIN_USER" --email "$ADMIN_EMAIL" --noinput || echo "  ⚠️  Superuser already exists or could not be created."
 
 echo ""
 echo "============================================================"

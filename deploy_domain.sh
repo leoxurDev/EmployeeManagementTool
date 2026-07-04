@@ -90,10 +90,10 @@ echo ""
 
 # --- Stop Docker containers to free up Port 80 for Nginx ---
 echo "  🐳  Stopping docker containers to free up port 80..."
-if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose down || true
-elif docker compose version >/dev/null 2>&1; then
+if docker compose version >/dev/null 2>&1; then
     docker compose down || true
+elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose down || true
 fi
 echo "  ✅  Docker containers stopped."
 echo ""
@@ -149,10 +149,10 @@ fi
 
 # --- Restart Docker Containers ---
 echo "  🔄  Restarting docker containers with new port configuration..."
-if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose up -d --build
-elif docker compose version >/dev/null 2>&1; then
+if docker compose version >/dev/null 2>&1; then
     docker compose up -d --build
+elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose up -d --build
 else
     echo "  ⚠️   docker-compose command not found. Please restart your containers manually."
 fi
