@@ -43,6 +43,9 @@ else:
             CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
             CSRF_TRUSTED_ORIGINS.append(f"http://{host}")
 
+# Trust the X-Forwarded-Proto header passed by Nginx to identify HTTPS requests
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # Application definition
 
