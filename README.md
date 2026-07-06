@@ -1,4 +1,4 @@
-# ⏰ Leoxur Solutions Limited — Employee Time & Management Portal
+# Employee Time & Management Portal
 
 > A modern, full-featured enterprise portal for employee attendance, shift scheduling, IT support ticketing, and internal communication — built on Django with a premium glassmorphic UI.
 
